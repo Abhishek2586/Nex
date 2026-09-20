@@ -1,0 +1,58 @@
+import uuid
+import json
+from nexora.edge.store import rows, execute, event
+
+def get_active_interventions(session_id):
+    return [json.loads(r['body']) for r in rows('SELECT body FROM interventions WHERE session_id=:id', {'id': session_id})]
+
+def is_intervention_active(session_id):
+    actives = get_active_interventions(session_id)
+    return any(i['status'] in ['offered', 'accepted'] for i in actives)
+
+def evaluate_policy(s, i, posture, current_time_s):
+    # Path A: Deterministic posture policy
+    decision = {'result': 'no_action', 'reason_codes': ['no_sustained_context'], 'source_type': 'synthetic', 'event_time_s': current_time_s}
+    
+    if posture > 20:
+        if s.get('posture_since') is None:
+            s['posture_since'] = current_time_s
+    else:
+        s['posture_since'] = None
+    
+    posture_triggered = False
+    if s.get('posture_since') is not None and current_time_s - s['posture_since'] >= 30:
+        if is_intervention_active(s['id']) or current_time_s - s.get('last_prompt', -1000) < s.get('cooldown_posture', 120):
+            decision.update(result='suppressed', reason_codes=['active_prompt_or_cooldown'])
+        else:
+            prompt = {'id': str(uuid.uuid4()), 'session_id': s['id'], 'type': 'posture', 'status': 'offered', 'text': 'Take a moment to adjust your posture if comfortable.', 'source': 'Synthetic', 'event_time_s': current_time_s}
+            execute('INSERT INTO interventions VALUES(:id,:sid,:body)', {'id': prompt['id'], 'sid': s['id'], 'body': json.dumps(prompt)})
+            s['last_prompt'] = current_time_s
+            event(s, 'intervention', prompt)
+            decision.update(result='triggered', reason_codes=['posture_above_20_for_30s'])
+            posture_triggered = True
+
+    # Path B: Model-driven stress-like policy
+    # We evaluate this if posture didn't trigger
+    if not posture_triggered and 'latest_prediction' in s and s['latest_prediction']:
+        pred = s['latest_prediction']
+        if pred.get('abstained') == False and pred.get('probabilities') and pred['probabilities'][1] > 0.6:
+            if s.get('model_evidence_since') is None:
+                s['model_evidence_since'] = current_time_s
+            
+            if current_time_s - s['model_evidence_since'] >= 30:
+                # check motion suppression (acc variance high etc - simplified to just cooldown check here)
+                # For demo purposes, we will trigger breathing if model is confident
+                if is_intervention_active(s['id']) or current_time_s - s.get('last_prompt_breathing', -1000) < s.get('cooldown_breathing', 240):
+                    if decision['result'] == 'no_action':
+                        decision.update(result='suppressed', reason_codes=['active_prompt_or_cooldown_breathing'])
+                else:
+                    prompt = {'id': str(uuid.uuid4()), 'session_id': s['id'], 'type': 'breathing', 'status': 'offered', 'text': 'Take a moment to breathe and reset.', 'source': 'Synthetic Model', 'event_time_s': current_time_s}
+                    execute('INSERT INTO interventions VALUES(:id,:sid,:body)', {'id': prompt['id'], 'sid': s['id'], 'body': json.dumps(prompt)})
+                    s['last_prompt_breathing'] = current_time_s
+                    event(s, 'intervention', prompt)
+                    decision.update(result='triggered', reason_codes=['model_sustained_evidence'])
+        else:
+            s['model_evidence_since'] = None
+
+    event(s, 'decision', decision)
+    return decision

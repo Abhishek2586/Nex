@@ -1,6 +1,15 @@
 # NEXORA build status
 
-Started: 2026-09-18. Status: implementation in progress; synthetic first flow and initial distributed experiments are working.
+Started: 2026-09-18.
+
+## Completion Levels
+- Core synthetic software prototype: PASS
+- Reviewer hardening: PASS
+- Real WESAD validation: PARTIAL (Split handling/CLI implemented; files absent)
+- Physical embodiment: NOT BUILT
+- Public/cloud deployment: OUT OF SCOPE
+- Clinical validation: NOT PERFORMED
+- Patent grant/examination outcome: NOT DETERMINED
 
 ## Inspection
 - Read the master build specification. Original folder contained only that specification.
@@ -27,13 +36,10 @@ Started: 2026-09-18. Status: implementation in progress; synthetic first flow an
 - Evidence ZIP is checksum-indexed and excludes SQLite state, secrets, keys, raw recordings and dependency directories.
 
 ## Current work
-Final clean-start rehearsal, browser matrix, documentation, and evidence generation completed.
+Patent Reviewer Hardening Plan implemented. Ready for evaluation.
 
 ## Not yet verified
 Real WESAD evaluation is not applicable as the dataset is not supplied.
 Hardware/cloud/clinical claims are out of scope for this prototype.
 
 Measured synthetic results: tree balanced accuracy 1.000/macro-F1 1.000; local MLP 0.500/0.375; initial one-round FedAvg 0.500/0.286. These are artificial-generator results only.
-
-## Exact next action
-All completion criteria are satisfied. No further action required.

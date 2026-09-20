@@ -1,7 +1,8 @@
 import uuid
 import pytest
 from fastapi.testclient import TestClient
-from nexora.edge.app import app,event,get
+from nexora.edge.app import app
+from nexora.edge.store import event, get
 
 def test_session_and_origin_boundary():
     with TestClient(app) as c:

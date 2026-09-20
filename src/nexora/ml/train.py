@@ -14,8 +14,8 @@ torch.set_num_threads(2)
 def network():
     return nn.Sequential(nn.Linear(12,32),nn.ReLU(),nn.Linear(32,16),nn.ReLU(),nn.Linear(16,2))
 
-def dataset():
-    root=Path('data/synthetic')
+def dataset(name='synthetic'):
+    root = Path('data/synthetic') if name == 'synthetic' else Path('data/processed/wesad')
     manifest=json.loads((root/'manifest.json').read_text())
     with np.load(root/'windows.npz',allow_pickle=False) as d:
         return {k:d[k].copy() for k in d.files},manifest
@@ -24,10 +24,10 @@ def evaluate(y,p):
     pred=np.asarray(p).argmax(1)
     return {'balanced_accuracy':float(balanced_accuracy_score(y,pred)), 'macro_f1':float(f1_score(y,pred,average='macro')), 'confusion_matrix':confusion_matrix(y,pred,labels=[0,1]).tolist(), 'classification_report':classification_report(y,pred,output_dict=True,zero_division=0), 'windows':len(y)}
 
-def train(kind):
-    d,m=dataset(); x=d['x']; y=d['y']
+def train(kind, dataset_name='synthetic'):
+    d,m=dataset(dataset_name); x=d['x']; y=d['y']
     masks={k:np.isin(d['subjects'],v) for k,v in m['splits'].items()}
-    started=time.time(); history=[]; model_dir=Path('models')/kind; model_dir.mkdir(parents=True,exist_ok=True)
+    started=time.time(); history=[]; model_dir=Path('models')/dataset_name/kind; model_dir.mkdir(parents=True,exist_ok=True)
     if kind=='baseline':
         model=RandomForestClassifier(n_estimators=100,class_weight='balanced',random_state=42,n_jobs=2)
         model.fit(x[masks['train']],y[masks['train']])
@@ -61,7 +61,11 @@ def train(kind):
     metrics=evaluate(y[masks['test']],p)
     majority=np.bincount(y[masks['train']]).argmax()
     metrics['majority_balanced_accuracy']=float(balanced_accuracy_score(y[masks['test']],np.full(masks['test'].sum(),majority)))
-    report={'model_id':kind,'source':'Synthetic','task':'stress_vs_baseline','feature_schema_hash':SCHEMA_HASH,'feature_names':NAMES,'model_hash':hashlib.sha256(weight_path.read_bytes()).hexdigest(),'dataset_hash':m['windows_sha256'],'splits':m['splits'],'metrics':metrics,'history':history,'duration_s':time.time()-started,'created_at':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()),'platform':platform.platform(),'python':platform.python_version()}
+    
+    # Safely get dataset hash if exists, otherwise empty
+    dataset_hash = m.get('windows_sha256', '')
+    
+    report={'model_id':kind,'source':'Recorded dataset' if dataset_name == 'wesad' else 'Synthetic','task':'stress_vs_baseline','feature_schema_hash':SCHEMA_HASH,'feature_names':NAMES,'model_hash':hashlib.sha256(weight_path.read_bytes()).hexdigest(),'dataset_hash':dataset_hash,'splits':m['splits'],'metrics':metrics,'history':history,'duration_s':time.time()-started,'created_at':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()),'platform':platform.platform(),'python':platform.python_version()}
     (model_dir/'metadata.json').write_text(json.dumps(report,indent=2))
     return report
 

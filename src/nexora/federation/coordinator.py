@@ -6,6 +6,7 @@ import sys
 import threading
 import time
 import uuid
+import hashlib
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
@@ -76,3 +77,46 @@ def cancel(job_id:str):
     with lock: process=processes.get(job_id)
     if process and process.poll() is None: process.terminate()
     job.update(status='cancelled',finished_at=time.time()); _save(job); return job
+
+class ActivationRequest(BaseModel):
+    run_id: str
+    round: int
+
+@app.post('/api/v1/models/active')
+def activate_model(body: ActivationRequest):
+    run_path = ROOT / 'artifacts' / 'runs' / body.run_id
+    if not run_path.exists(): raise HTTPException(404, 'Run not found')
+    manifest = json.loads((run_path / 'manifest.json').read_text())
+    
+    # Validation checks
+    if len(manifest['rounds']) < body.round: raise HTTPException(422, 'Round not found in run')
+    round_meta = manifest['rounds'][body.round - 1]
+    
+    safetensor_path = run_path / f"round-{body.round}.safetensors"
+    if not safetensor_path.exists(): raise HTTPException(404, 'Model weights missing')
+    
+    b_hash = hashlib.sha256(safetensor_path.read_bytes()).hexdigest()
+    if b_hash != round_meta['model_hash']: raise HTTPException(400, 'Model hash mismatch validation failed')
+    
+    target_dir = ROOT / 'models' / 'neural'
+    target_dir.mkdir(parents=True, exist_ok=True)
+    import shutil
+    shutil.copy2(safetensor_path, target_dir / 'model.safetensors')
+    
+    meta = {
+        'model_id': 'neural',
+        'active_run': body.run_id,
+        'active_round': body.round,
+        'model_hash': round_meta['model_hash'],
+        'metrics': manifest['metrics'],
+        'activated_at': time.time()
+    }
+    (target_dir / 'metadata.json').write_text(json.dumps(meta, indent=2))
+    return meta
+
+@app.get('/api/v1/models/active')
+def get_active_model():
+    target_meta = ROOT / 'models' / 'neural' / 'metadata.json'
+    if not target_meta.exists(): raise HTTPException(404, 'No active model')
+    return json.loads(target_meta.read_text())
+
