@@ -1,0 +1,17 @@
+{
+  "generated_at": "2026-09-18",
+  "claims": [
+    {"claim": "1(a)", "status": "simulated_input_or_output", "evidence": ["data/synthetic/manifest.json"], "limitation": "Physical sensors are absent."},
+    {"claim": "1(b)", "status": "partially_demonstrated", "evidence": ["src/nexora/edge/app.py"], "limitation": "Local software processing is implemented; embedded equivalence is not established."},
+    {"claim": "1(c)", "status": "partially_demonstrated", "evidence": ["src/nexora/federation/experiment.py"], "limitation": "Coordinator role runs locally; cloud hosting is absent."},
+    {"claim": "1(d)", "status": "simulated_input_or_output", "evidence": ["frontend/src/main.tsx"], "limitation": "Browser prompts are implemented; physical actuation is absent."},
+    {"claim": "3", "status": "implemented_software", "evidence": ["models/baseline/metadata.json", "models/neural/metadata.json"], "limitation": "Narrow synthetic stress-versus-baseline task only; no disease forecasting."},
+    {"claim": "4", "status": "partially_demonstrated", "evidence": ["runtime/client-a/state.sqlite"], "limitation": "Prompt workflow and feedback persist; no treatment effect is established."},
+    {"claim": "5", "status": "implemented_software", "evidence": ["src/nexora/ml/train.py", "tests/unit/test_explanations.py"], "limitation": "Integrated Gradients and SHAP are implemented; LIME is absent and attributions are not causal."},
+    {"claim": "6", "status": "implemented_software", "evidence": ["artifacts/runs"], "limitation": "Three genuine local client processes on one host; no secure aggregation."},
+    {"claim": "7", "status": "implemented_software", "evidence": ["runtime/client-a/privacy.json", "runtime/client-b/privacy.json", "runtime/client-c/privacy.json"], "limitation": "Example-level synthetic-window protection with experimental non-cryptographic randomness."},
+    {"claim": "8", "status": "partially_demonstrated", "evidence": ["src/nexora/edge/app.py", "artifacts/reports/coordinator-outage.json", "artifacts/reports/tls-verification.json"], "limitation": "Outage/restart and project-CA-verified loopback TLS were tested; physical IoT links are absent."},
+    {"claim": "9", "status": "partially_demonstrated", "evidence": ["src/nexora/data/wesad.py", "tests/unit/test_wesad.py"], "limitation": "WESAD adapter contracts are tested; no real dataset or hospital/wearable integration is present."},
+    {"claim": "10", "status": "partially_demonstrated", "evidence": ["BUILD_STATUS.md"], "limitation": "Synthetic software path works; inherited physical limitations remain."}
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "version": "synthetic-v1",
+  "window_seconds": 30,
+  "features": ["eda_mean", "eda_std", "eda_slope", "eda_p95", "temperature_mean", "temperature_std", "temperature_slope", "magnitude_mean", "magnitude_std", "magnitude_p95", "magnitude_energy", "magnitude_change_rate"],
+  "schema_hash": "c3508f9a98875f2221c47d1a1c2880865bcd980c610cd8d509fb1d7b5fed61e7"
+}

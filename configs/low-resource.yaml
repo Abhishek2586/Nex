@@ -1,0 +1,7 @@
+profile: low-resource
+host: 127.0.0.1
+edge_port: 8080
+coordinator_port: 8100
+source: Synthetic
+replay_speed: 5
+worker_limit: 1

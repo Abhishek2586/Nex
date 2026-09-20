@@ -1,0 +1,7 @@
+{
+  "sources": [
+    {"name": "Synthetic", "status": "executed", "path": "data/synthetic", "label": "Generated synthetic dataset"},
+    {"name": "WESAD", "status": "unavailable", "path": "data/raw/wesad", "label": "Recorded dataset; user-supplied under its terms"},
+    {"name": "Manual feedback", "status": "implemented", "path": "runtime/client-a/state.sqlite", "label": "User interaction state"}
+  ]
+}

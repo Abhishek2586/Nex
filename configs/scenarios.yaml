@@ -1,0 +1,11 @@
+scenarios:
+  - normal
+  - gradual_stress
+  - sustained_posture
+  - brief_posture
+  - missing_data
+  - high_motion
+  - repeated_dismissal
+labels:
+  signals: Synthetic
+  feedback: Manual feedback
