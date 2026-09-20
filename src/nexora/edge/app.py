@@ -52,11 +52,14 @@ async def replay():
             s=json.loads(row['body'])
             if s['status']!='running': continue
             samples,labels,posture=generate_subject(0,s['seed'],scenario=s['scenario'])
+            # Pre-generate heart rate array: 68 bpm baseline, correlated with posture/stress
+            _rng_hr=np.random.default_rng(s['seed']+99999)
+            hr_array=np.clip(68.0+0.6*posture+_rng_hr.normal(0,2.5,len(posture)),45.0,130.0).round(1)
             for _ in range(s['speed']):
                 i=s['index']
                 if i>=len(samples): s['status']='stopped'; break
                 values=samples[i]
-                obs={'event_time_s':i/4,'source_type':'synthetic','source_label':'Synthetic','signals':{key:None if not np.isfinite(v) else float(v) for key,v in zip(['eda_us','skin_temperature_c','acc_x_g','acc_y_g','acc_z_g'],values)},'heart_rate_bpm':None,'posture_angle_deg':float(posture[i])}
+                obs={'event_time_s':i/4,'source_type':'synthetic','source_label':'Synthetic','signals':{key:None if not np.isfinite(v) else float(v) for key,v in zip(['eda_us','skin_temperature_c','acc_x_g','acc_y_g','acc_z_g'],values)},'heart_rate_bpm':float(hr_array[i]),'posture_angle_deg':float(posture[i])}
                 event(s,'observation',obs)
                 if posture[i]>20:
                     if s['posture_since'] is None:s['posture_since']=i/4
@@ -101,7 +104,7 @@ app=FastAPI(title='NEXORA Edge Research API',lifespan=lifespan)
 @app.middleware('http')
 async def origin_guard(request:Request,call_next):
     origin=request.headers.get('origin')
-    if origin and origin!=str(request.base_url).rstrip('/'):
+    if origin and origin not in (str(request.base_url).rstrip('/'), 'http://localhost:5173', 'http://127.0.0.1:5173'):
         from fastapi.responses import JSONResponse
         return JSONResponse({'error':'origin_rejected'},status_code=403)
     return await call_next(request)
@@ -117,6 +120,10 @@ class FeedbackRequest(BaseModel):
 class ExperimentRequest(BaseModel):
     mode:str
     rounds:int=Field(default=1,ge=1,le=5)
+@app.get('/favicon.ico',include_in_schema=False)
+async def favicon():
+    from fastapi.responses import Response
+    return Response(status_code=204)
 @app.get('/api/v1/health')
 def health():
     coordinator_url=os.environ.get('NEXORA_COORDINATOR_URL','http://127.0.0.1:8100')
@@ -148,7 +155,7 @@ def events(sid:str,after:int=0,limit:int=500):
 @app.websocket('/api/v1/sessions/{sid}/stream')
 async def stream(websocket:WebSocket,sid:str,after:int=0):
     origin=websocket.headers.get('origin'); host=websocket.headers.get('host')
-    if origin and origin not in {f'http://{host}',f'https://{host}'}:
+    if origin and origin not in {f'http://{host}',f'https://{host}','http://localhost:5173','http://127.0.0.1:5173'}:
         await websocket.close(code=1008); return
     try: get(sid)
     except HTTPException:
