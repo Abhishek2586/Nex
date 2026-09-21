@@ -16,3 +16,29 @@ class FeedbackRequest(BaseModel):
 class ExperimentRequest(BaseModel):
     mode: str
     rounds: int = Field(default=1, ge=1, le=5)
+
+class Observation(BaseModel):
+    event_time_s: float
+    source_type: str
+    source_label: str
+    signals: dict
+    heart_rate_bpm: float
+    posture_angle_deg: float
+
+class Prediction(BaseModel):
+    prediction_id: str
+    abstained: bool
+    reason: Optional[str] = None
+    probabilities: Optional[list] = None
+    predicted_class: Optional[int] = None
+    model_id: Optional[str] = None
+    model_hash: Optional[str] = None
+    inference_ms: Optional[float] = None
+    features: Optional[list] = None
+    source: str
+
+class Decision(BaseModel):
+    result: str
+    reason_codes: list
+    source_type: str
+    event_time_s: float

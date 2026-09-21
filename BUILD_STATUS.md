@@ -36,7 +36,12 @@ Started: 2026-09-18.
 - Evidence ZIP is checksum-indexed and excludes SQLite state, secrets, keys, raw recordings and dependency directories.
 
 ## Current work
-Patent Reviewer Hardening Plan implemented. Ready for evaluation.
+Patent Reviewer Hardening Plan implemented and fully completed. Clean clone verification script implemented.
+
+## Verified work addition
+- Added `scripts/fresh_clone_rehearsal.py` for automated pipeline checkout.
+- Automated comprehensive UI coverage added via Playwright spanning normal, pause, missing-data, intervention, model activation and federation test cases. E2E execution connected to GitHub Actions CI over a real backend.
+- Expanded integration tests targeting failure states and API edge cases.
 
 ## Not yet verified
 Real WESAD evaluation is not applicable as the dataset is not supplied.

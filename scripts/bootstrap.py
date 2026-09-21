@@ -52,6 +52,8 @@ def main():
     if frontend_dir.exists():
         print("Installing frontend dependencies...")
         run_command(["npm", "install"], cwd=frontend_dir)
+        print("Installing Playwright browsers...")
+        run_command(["npx", "playwright", "install", "--with-deps", "chromium"], cwd=frontend_dir)
         print("Building frontend...")
         run_command(["npm", "run", "build"], cwd=frontend_dir)
     else:

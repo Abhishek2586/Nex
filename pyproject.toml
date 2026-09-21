@@ -7,7 +7,7 @@ name = "nexora"
 version = "0.1.0"
 description = "Local software-in-the-loop research prototype"
 requires-python = ">=3.11,<3.14"
-dependencies = ["fastapi", "uvicorn", "websockets", "sqlalchemy", "numpy", "scipy", "pandas", "scikit-learn", "torch", "opacus", "captum", "shap", "safetensors", "httpx", "pyyaml", "psutil", "cryptography"]
+dependencies = ["fastapi", "uvicorn", "websockets", "sqlalchemy", "numpy", "scipy", "pandas", "scikit-learn", "torch", "opacus", "captum", "shap", "safetensors", "httpx", "pyyaml", "psutil", "cryptography", "python-multipart"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

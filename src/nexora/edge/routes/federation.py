@@ -11,11 +11,28 @@ ROOT = Path(__file__).resolve().parents[4]
 def coordinator_request(method, path, **kwargs):
     base = os.environ.get('NEXORA_COORDINATOR_URL', 'http://127.0.0.1:8100')
     ca_file = os.environ.get('NEXORA_CA_FILE')
-    return httpx.request(method, f'{base}{path}', verify=ca_file or True, **kwargs)
+    expected_token = (ROOT / 'runtime/control/tokens.json').read_text() if (ROOT / 'runtime/control/tokens.json').exists() else '{}'
+    tokens = json.loads(expected_token)
+    cid = os.environ.get('NEXORA_CLIENT', 'client-a')
+    headers = kwargs.pop('headers', {})
+    headers['Authorization'] = f"Bearer {tokens.get(cid, '')}"
+    return httpx.request(method, f'{base}{path}', verify=ca_file or True, headers=headers, **kwargs)
 
 @router.get('/metrics')
 def metrics():
-    return [json.loads(p.read_text()) for p in (ROOT / 'models').glob('*/metadata.json')]
+    active_path = ROOT / 'models/registry/active.json'
+    history_path = ROOT / 'models/registry/history.json'
+    results = []
+    
+    if history_path.exists():
+        try: results.extend(json.loads(history_path.read_text()))
+        except: pass
+        
+    if active_path.exists():
+        try: results.append(json.loads(active_path.read_text()))
+        except: pass
+        
+    return results
 
 @router.get('/experiments')
 def experiments():
@@ -77,7 +94,79 @@ def privacy():
             continue
     return sorted(ledgers, key=lambda item: item.get('client_id', 'unknown'))
 
-from fastapi import File, UploadFile, Form
+@router.get('/privacy/projection')
+def privacy_projection():
+    try:
+        from opacus.accountants import RDPAccountant
+    except ImportError:
+        return []
+
+    ledgers = []
+    for path in (ROOT / 'runtime').glob('client-*/privacy.json'):
+        try:
+            ledger = json.loads(path.read_text())
+            delta = ledger.get("delta", 1e-5)
+            
+            projected = RDPAccountant()
+            projected.history = [tuple(item) for item in ledger.get("history", [])]
+            
+            if not projected.history:
+                continue
+                
+            last_noise, last_sample_rate, last_steps = projected.history[-1]
+            
+            # Next round epsilon
+            proj_next = RDPAccountant()
+            proj_next.history = [tuple(item) for item in ledger.get("history", [])]
+            proj_next.history.append((last_noise, last_sample_rate, last_steps))
+            next_eps = proj_next.get_epsilon(delta)
+            
+            # Calculate remaining rounds
+            test_proj = RDPAccountant()
+            test_proj.history = [tuple(item) for item in ledger.get("history", [])]
+            remaining = 0
+            while test_proj.get_epsilon(delta) <= 8.0 and remaining < 100:
+                test_proj.history.append((last_noise, last_sample_rate, last_steps))
+                remaining += 1
+                
+            ledgers.append({
+                "client_id": ledger.get("client_id", "unknown"),
+                "current_epsilon": ledger.get("epsilon", 0.0),
+                "next_epsilon": float(next_eps),
+                "remaining_rounds": max(0, remaining - 1),
+                "max_epsilon": 8.0
+            })
+        except Exception:
+            pass
+    return sorted(ledgers, key=lambda item: item["client_id"])
+
+from fastapi.responses import JSONResponse
+
+@router.get('/evidence/export')
+def export_evidence():
+    active_path = ROOT / 'models/registry/active.json'
+    history_path = ROOT / 'models/registry/history.json'
+    
+    evidence = {
+        "metrics": [],
+        "privacy": []
+    }
+    
+    if history_path.exists():
+        try: evidence["metrics"].extend(json.loads(history_path.read_text()))
+        except: pass
+        
+    if active_path.exists():
+        try: evidence["metrics"].append(json.loads(active_path.read_text()))
+        except: pass
+        
+    for path in (ROOT / 'runtime').glob('client-*/privacy.json'):
+        try: evidence["privacy"].append(json.loads(path.read_text()))
+        except: pass
+        
+    return JSONResponse(content=evidence, headers={"Content-Disposition": "attachment; filename=evidence.json"})
+
+from fastapi import File, UploadFile, Form, Header
 import tempfile
 import uuid
 import shutil
@@ -87,9 +176,14 @@ from nexora.federation.client_worker import train_client
 async def train(
     base_model: UploadFile = File(...),
     private: bool = Form(False),
-    client_id: str = Form(None)
+    authorization: str = Header(None)
 ):
-    cid = client_id or os.environ.get('NEXORA_CLIENT', 'client-a')
+    expected_token = (ROOT / 'runtime/control/tokens.json').read_text() if (ROOT / 'runtime/control/tokens.json').exists() else '{}'
+    tokens = json.loads(expected_token)
+    cid = os.environ.get('NEXORA_CLIENT', 'client-a')
+    
+    if authorization != f"Bearer {tokens.get(cid, '')}":
+        raise HTTPException(401, 'Invalid or missing service token')
     run_id = str(uuid.uuid4())
     work_dir = ROOT / 'runtime' / cid / 'federation' / run_id
     work_dir.mkdir(parents=True, exist_ok=True)

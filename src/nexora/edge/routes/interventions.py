@@ -48,9 +48,10 @@ def feedback(iid: str, body: FeedbackRequest):
         s[dismissals_key] = [t for t in s[dismissals_key] if current_time_s - t <= 600] + [current_time_s]
         
         if len(s[dismissals_key]) >= 2:
-            s[cooldown_key] = min(1200, s[cooldown_key] * 2)
+            s[cooldown_key] = min(600, s[cooldown_key] * 2)
+            s['policy_version'] = s.get('policy_version', 1) + 1
             s[dismissals_key] = []
-            event(s, 'policy_changed', {'cooldown_s': s[cooldown_key], 'type': itype, 'reason': f'two_{itype}_dismissals_within_10min'})
+            event(s, 'policy_changed', {'cooldown_s': s[cooldown_key], 'type': itype, 'reason': f'two_{itype}_dismissals_within_10min', 'version': s['policy_version']})
         save(s)
         
     return item

@@ -72,11 +72,23 @@ def import_directory(source:Path,output_dir=Path('data/processed/wesad'),trusted
     subjects = [item['subject'] for item in results]
     np.random.seed(42)
     shuffled = np.random.permutation(subjects).tolist()
-    split_idx = int(len(shuffled) * 0.8)
-    splits = {
-        'train': shuffled[:split_idx],
-        'test': shuffled[split_idx:]
-    }
+    # WESAD has exactly 15 subjects
+    if len(shuffled) >= 15:
+        splits = {
+            'train': shuffled[:9],
+            'validation': shuffled[9:12],
+            'test': shuffled[12:15]
+        }
+    else:
+        # Fallback for small fixtures
+        n = len(shuffled)
+        tr = max(1, int(n * 0.6))
+        val = max(1, int(n * 0.2))
+        splits = {
+            'train': shuffled[:tr],
+            'validation': shuffled[tr:tr+val],
+            'test': shuffled[tr+val:]
+        }
     
     # Also combine all npz into one windows.npz like synthetic data has
     all_x = []

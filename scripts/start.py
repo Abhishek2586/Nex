@@ -10,9 +10,19 @@ if __name__=='__main__':
     parser.add_argument('--profile',choices=['demo','dev','low-resource','secure-demo'],default='demo')
     parser.add_argument('--port',type=int,default=8080)
     args=parser.parse_args()
-    if not (root/'frontend/dist/index.html').exists() or not (root/'models/neural/metadata.json').exists():
+    if not (root/'frontend/dist/index.html').exists() or not (root/'models/registry/active.json').exists():
         raise SystemExit('Prepared frontend/model artifacts are missing. Run the preparation commands documented in README.md.')
     manifest=root/'runtime/control/process.json'; manifest.parent.mkdir(parents=True,exist_ok=True)
+    
+    import secrets
+    tokens = {
+        'coordinator': secrets.token_hex(32),
+        'client-a': secrets.token_hex(32),
+        'client-b': secrets.token_hex(32),
+        'client-c': secrets.token_hex(32)
+    }
+    (root/'runtime/control/tokens.json').write_text(json.dumps(tokens, indent=2))
+    
     coordinator_command=[sys.executable,'-m','uvicorn','nexora.federation.coordinator:app','--host','127.0.0.1','--port','8100']
     ssl_options={}
     env_b = os.environ.copy()
@@ -33,6 +43,23 @@ if __name__=='__main__':
 
     coordinator=subprocess.Popen(coordinator_command,cwd=root,env=os.environ.copy())
     
+    # Wait for coordinator to bind
+    import time, urllib.request, urllib.error
+    coord_url = os.environ.get('NEXORA_COORDINATOR_URL', 'http://127.0.0.1:8100') + '/health'
+    for _ in range(30):
+        try:
+            if ssl_options:
+                import ssl
+                ctx = ssl.create_default_context()
+                ctx.check_hostname = False
+                ctx.verify_mode = ssl.CERT_NONE
+                urllib.request.urlopen(coord_url, context=ctx)
+            else:
+                urllib.request.urlopen(coord_url)
+            break
+        except Exception:
+            time.sleep(0.5)
+            
     cb_cmd = [sys.executable, '-m', 'uvicorn', 'nexora.edge.app:app', '--host', '127.0.0.1', '--port', '8082']
     cc_cmd = [sys.executable, '-m', 'uvicorn', 'nexora.edge.app:app', '--host', '127.0.0.1', '--port', '8083']
     if ssl_options:

@@ -5,6 +5,8 @@
 /artifacts/
 /frontend/dist/
 /frontend/node_modules/
+/frontend/playwright-report/
+/frontend/test-results/
 /.pytest_cache/
 /.pytest_temp/
 __pycache__/
@@ -14,5 +16,3 @@ src/*.egg-info/
 *.pem
 *.key
 /WESAD/
-/frontend/playwright-report/
-/frontend/test-results/

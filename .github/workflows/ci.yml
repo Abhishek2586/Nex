@@ -31,12 +31,12 @@ jobs:
     - name: Run lint and typecheck
       run: |
         pip install flake8 mypy
-        flake8 src/nexora || true
-        mypy src/nexora --ignore-missing-imports || true
+        flake8 src/nexora
+        mypy src/nexora --ignore-missing-imports
 
     - name: Run pytest
       run: |
-        pytest tests/ -v --junitxml=reports/pytest.xml || true
+        pytest tests/ -v --junitxml=reports/pytest.xml
     
     - name: Set up Node.js
       uses: actions/setup-node@v4
@@ -53,9 +53,23 @@ jobs:
 
     - name: Run Frontend Tests
       working-directory: ./frontend
-      run: npm run test || true
+      run: npm run test
 
     - name: Minimal Smoke Test
       run: |
-        mkdir -data runtime models artifacts || true
-        python -c "from nexora.data import synthetic; synthetic.generate_demo_data(10, 'data/synthetic_smoke.csv')" || true
+        python scripts/bootstrap.py
+
+    - name: Install Playwright Browsers
+      working-directory: ./frontend
+      run: npx playwright install --with-deps
+
+    - name: Run Playwright E2E Tests
+      env:
+        BASE_URL: http://127.0.0.1:8080
+      run: |
+        # Start the prepared demo on port 8080 (which serves the frontend dist)
+        python scripts/start.py &
+        sleep 10
+        # Run playwright tests
+        cd frontend
+        npx playwright test

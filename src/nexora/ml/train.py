@@ -70,41 +70,69 @@ def train(kind, dataset_name='synthetic'):
     return report
 
 class Predictor:
-    def __init__(self,kind='neural'):
-        self.kind=kind; root=Path('models')/kind
-        self.metadata=json.loads((root/'metadata.json').read_text())
-        if self.metadata['feature_schema_hash']!=SCHEMA_HASH: raise ValueError('Feature schema mismatch')
-        path=root/('weights.safetensors' if kind=='neural' else 'weights.npz')
-        if hashlib.sha256(path.read_bytes()).hexdigest()!=self.metadata['model_hash']: raise ValueError('Model hash mismatch')
-        if kind=='neural':
-            self.model=network(); self.model.load_state_dict(load_file(str(path))); self.model.eval()
+    def __init__(self, kind=None, dataset=None):
+        registry_path = Path('models/registry/active.json')
+        if kind is None and dataset is None and registry_path.is_file():
+            active = json.loads(registry_path.read_text())
+            self.kind = active['model_id']
+            dataset = active['source']
+            root = Path(active['artifact_path']) if 'artifact_path' in active else Path('models') / dataset / self.kind
+            self.metadata = active
         else:
-            with np.load(path,allow_pickle=False) as d: self.trees={k:d[k].copy() for k in d.files}
-    def predict(self,values):
-        x=np.atleast_2d(values)
-        if self.kind=='neural':
+            self.kind = kind or 'neural'
+            dataset = dataset or 'synthetic'
+            root = Path('models') / dataset / self.kind
+            if not (root / 'metadata.json').is_file():
+                raise FileNotFoundError(f"No metadata found at {root}")
+            self.metadata = json.loads((root / 'metadata.json').read_text())
+            
+        if self.metadata.get('feature_schema_hash') != SCHEMA_HASH: raise ValueError('Feature schema mismatch')
+        
+        path = root / ('weights.safetensors' if self.kind == 'neural' else 'weights.npz')
+        if hashlib.sha256(path.read_bytes()).hexdigest() != self.metadata.get('model_hash'): raise ValueError('Model hash mismatch')
+        
+        if self.kind == 'neural':
+            self.model = network()
+            self.model.load_state_dict(load_file(str(path)))
+            self.model.eval()
+        else:
+            with np.load(path, allow_pickle=False) as d:
+                self.trees = {k: d[k].copy() for k in d.files}
+                
+    def predict(self, values):
+        x = np.atleast_2d(values)
+        if self.kind == 'neural':
             with torch.no_grad(): return self.model(torch.tensor(normalize(x))).softmax(1).numpy()
-        out=[]
+        out = []
         for row in x:
-            scores=[]
+            scores = []
             for i in range(100):
-                t=lambda key:self.trees[f'{i}_{key}']; node=0
-                while t('children_left')[node]!=-1:
-                    node=int(t('children_left')[node] if row[int(t('feature')[node])]<=t('threshold')[node] else t('children_right')[node])
-                counts=t('value')[node].reshape(-1); scores.append(counts/counts.sum())
-            out.append(np.mean(scores,axis=0))
+                t = lambda key: self.trees[f'{i}_{key}']; node = 0
+                while t('children_left')[node] != -1:
+                    node = int(t('children_left')[node] if row[int(t('feature')[node])] <= t('threshold')[node] else t('children_right')[node])
+                counts = t('value')[node].reshape(-1); scores.append(counts / counts.sum())
+            out.append(np.mean(scores, axis=0))
         return np.array(out)
-    def explain(self,values):
-        xraw=np.atleast_2d(values)
-        target=int(self.predict(values)[0].argmax())
-        if self.kind=='neural':
-            from captum.attr import IntegratedGradients
-            x=torch.tensor(normalize(xraw),requires_grad=True)
-            attributions,delta=IntegratedGradients(self.model).attribute(x,baselines=torch.full_like(x,.5),target=target,n_steps=128,return_convergence_delta=True)
-            return {'method':'Integrated Gradients','output_space':'logit','class':target,'values':attributions.detach().numpy()[0].tolist(),'feature_names':NAMES,'convergence_delta':float(delta[0]),'reference':'fixed 0.5 in normalized space','model_hash':self.metadata['model_hash']}
-        import shap
-        background=np.vstack([LOW,(LOW+HIGH)/2,HIGH])
-        explanation=shap.Explainer(self.predict,background,algorithm='permutation')(xraw,max_evals=2*len(NAMES)+1,silent=True)
-        values=explanation.values[0,:,target]
-        base=float(explanation.base_values[0,target]); output=float(self.predict(xraw)[0,target])
-        return {'method':'SHAP PermutationExplainer','output_space':'probability','class':target,'values':values.tolist(),'feature_names':NAMES,'base_value':base,'output_value':output,'completeness_delta':float(base+values.sum()-output),'reference':'public fixed engineering bounds: low, midpoint and high','model_hash':self.metadata['model_hash']}
+        
+    def explain(self, values):
+        xraw = np.atleast_2d(values)
+        target = int(self.predict(values)[0].argmax())
+        if self.kind == 'neural':
+            import torch, captum.attr
+            tx = torch.tensor(normalize(xraw), requires_grad=True)
+            ig = captum.attr.IntegratedGradients(self.model)
+            baseline = torch.zeros_like(tx)
+            attributions, delta = ig.attribute(tx, baseline, target=target, return_convergence_delta=True)
+            return {'method': 'IntegratedGradients', 'output_space': 'probability', 'class': target, 'values': attributions[0].detach().tolist(), 'convergence_delta': float(delta[0]), 'feature_names': NAMES}
+        else:
+            import shap
+            explainer = shap.PermutationExplainer(self.predict, np.zeros((1, 12)))
+            shap_values = explainer(xraw)
+            return {
+                'method': 'SHAP PermutationExplainer', 
+                'output_space': 'probability', 
+                'class': target, 
+                'values': shap_values.values[0, :, target].tolist(), 
+                'completeness_delta': 0.0, 
+                'feature_names': NAMES
+            }

@@ -9,7 +9,7 @@ def main():
     wesad=data.add_parser('import-wesad'); wesad.add_argument('--path',required=True); wesad.add_argument('--trusted-original',action='store_true')
     training=sub.add_parser('train'); training.add_argument('kind',choices=['baseline','neural']); training.add_argument('--dataset',choices=['synthetic','wesad'],default='synthetic')
     experiment=sub.add_parser('experiment').add_subparsers(dest='action',required=True)
-    run=experiment.add_parser('run'); run.add_argument('--mode',choices=['federated','private-federated'],required=True); run.add_argument('--dataset',choices=['synthetic'],default='synthetic'); run.add_argument('--rounds',type=int,default=5)
+    run=experiment.add_parser('run'); run.add_argument('--mode',choices=['federated','private-federated'],required=True); run.add_argument('--dataset',choices=['synthetic','wesad'],default='synthetic'); run.add_argument('--rounds',type=int,default=5)
     args=parser.parse_args()
     if args.command=='data' and args.action=='generate': result=prepare(seed=args.seed)
     elif args.command=='data':
@@ -20,7 +20,7 @@ def main():
         result=train(args.kind, dataset_name=args.dataset)
     else:
         from nexora.federation.experiment import run
-        result=run(rounds=args.rounds,private=args.mode=='private-federated')
+        result=run(rounds=args.rounds,private=args.mode=='private-federated',dataset=args.dataset)
     print(json.dumps(result,indent=2))
 
 if __name__=='__main__': main()

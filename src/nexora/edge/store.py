@@ -35,19 +35,34 @@ def get(sid):
     if not r: raise HTTPException(404, 'Session not found')
     return json.loads(r[0]['body'])
 
+from nexora.edge.schemas import Observation, Prediction, Decision
+
 def event(s, kind, body):
-    # Concurrency safe sequence generator
-    # We must do this carefully or rely on DB defaults, but for now we emulate the logic
-    seq_val = rows('SELECT COALESCE(MAX(sequence),0)+1 AS n FROM events WHERE session_id=:id', {'id': s['id']})[0]['n']
-    e = {
-        'schema_version': '1.0', 
-        'event_id': str(uuid.uuid4()), 
-        'session_id': s['id'], 
-        'sequence': seq_val, 
-        'event_type': kind, 
-        'occurred_at': datetime.now(timezone.utc).isoformat(), 
-        'payload': body
-    }
-    execute('INSERT INTO events VALUES(:id,:sid,:seq,:kind,:body)', 
-            {'id': e['event_id'], 'sid': s['id'], 'seq': seq_val, 'kind': kind, 'body': json.dumps(e)})
-    return e
+    if kind == 'observation':
+        Observation(**body)
+    elif kind == 'prediction':
+        Prediction(**body)
+    elif kind == 'decision':
+        Decision(**body)
+        
+    # Concurrency safe sequence generator with retry
+    import sqlalchemy.exc
+    for attempt in range(5):
+        try:
+            seq_val = rows('SELECT COALESCE(MAX(sequence),0)+1 AS n FROM events WHERE session_id=:id', {'id': s['id']})[0]['n']
+            e = {
+                'schema_version': '1.0', 
+                'event_id': str(uuid.uuid4()), 
+                'session_id': s['id'], 
+                'sequence': seq_val, 
+                'event_type': kind, 
+                'occurred_at': datetime.now(timezone.utc).isoformat(), 
+                'payload': body
+            }
+            execute('INSERT INTO events VALUES(:id,:sid,:seq,:kind,:body)', 
+                    {'id': e['event_id'], 'sid': s['id'], 'seq': seq_val, 'kind': kind, 'body': json.dumps(e)})
+            return e
+        except sqlalchemy.exc.IntegrityError:
+            if attempt == 4: raise
+            import time
+            time.sleep(0.01 * (attempt + 1))

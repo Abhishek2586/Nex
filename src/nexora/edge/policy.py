@@ -40,9 +40,10 @@ def evaluate_policy(s, i, posture, current_time_s):
                 s['model_evidence_since'] = current_time_s
             
             if current_time_s - s['model_evidence_since'] >= 30:
-                # check motion suppression (acc variance high etc - simplified to just cooldown check here)
-                # For demo purposes, we will trigger breathing if model is confident
-                if is_intervention_active(s['id']) or current_time_s - s.get('last_prompt_breathing', -1000) < s.get('cooldown_breathing', 240):
+                if pred.get('features') and pred['features'][8] > 0.35:
+                    if decision['result'] == 'no_action':
+                        decision.update(result='suppressed', reason_codes=['high_motion'])
+                elif is_intervention_active(s['id']) or current_time_s - s.get('last_prompt_breathing', -1000) < s.get('cooldown_breathing', 240):
                     if decision['result'] == 'no_action':
                         decision.update(result='suppressed', reason_codes=['active_prompt_or_cooldown_breathing'])
                 else:

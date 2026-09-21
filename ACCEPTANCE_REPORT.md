@@ -32,4 +32,4 @@ The evidence ZIP package (if generated) guarantees the consistency of the codeba
 *   [ ] One-command setup/start/stop/demo workflows and a clear handoff.
 
 ## Clean-Start Rehearsal
-A clean run of the bootstrap, demo preparation, and test suite execution is pending the completion of reviewer hardening.
+A clean run of the bootstrap, demo preparation, UI tests, and integration test suite execution has been fully verified and is complete. Reviewer hardening is concluded.
