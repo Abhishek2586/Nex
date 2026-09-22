@@ -112,9 +112,9 @@ def main():
         env_a['NEXORA_COORDINATOR_URL'] = env_b['NEXORA_COORDINATOR_URL'] = env_c['NEXORA_COORDINATOR_URL'] = f'http://127.0.0.1:{args.coordinator_port}'
 
     def wait_for_health(url, name, ctx=None):
-        for _ in range(30):
+        for _ in range(60):
             try:
-                urllib.request.urlopen(url, context=ctx, timeout=1)
+                urllib.request.urlopen(url, context=ctx, timeout=5)
                 return True
             except Exception:
                 time.sleep(0.5)
