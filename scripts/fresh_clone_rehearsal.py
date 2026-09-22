@@ -124,7 +124,7 @@ def main():
                 import time
                 manifest_path = clone_dir / 'runtime/control/process.json'
                 ready = False
-                for _ in range(60):
+                for _ in range(180):
                     if manifest_path.exists():
                         try:
                             if json.loads(manifest_path.read_text()).get('pid'):

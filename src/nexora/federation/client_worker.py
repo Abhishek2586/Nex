@@ -15,7 +15,10 @@ def _load_partition(client_id: str):
     manifest = json.loads((root / "manifest.json").read_text())
     with np.load(root / "windows.npz", allow_pickle=False) as data:
         mask = np.isin(data["subjects"], manifest["clients"][client_id])
-        return normalize(data["x"][mask]), data["y"][mask].astype(np.int64)
+        x = normalize(data["x"][mask])
+        y = data["y"][mask].astype(np.int64)
+
+    return x, y
 
 
 def _load_ledger(path: Path):
@@ -26,6 +29,15 @@ def _load_ledger(path: Path):
 
 def train_client(client_id: str, base: Path, output: Path, private: bool):
     torch.set_num_threads(1)
+    
+    # Architecture check
+    metadata_path = base.with_name('metadata.json')
+    if metadata_path.exists():
+        from nexora.ml.train import ARCHITECTURE_ID
+        meta = json.loads(metadata_path.read_text())
+        if meta.get('architecture_id') != ARCHITECTURE_ID:
+            raise ValueError(f"Architecture mismatch in client. Expected {ARCHITECTURE_ID}, got {meta.get('architecture_id')}")
+            
     model = network()
     model.load_state_dict(load_file(str(base)))
     x, y = _load_partition(client_id)

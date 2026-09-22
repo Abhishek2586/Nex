@@ -35,23 +35,43 @@ def evaluate_policy(s, i, posture, current_time_s):
     # We evaluate this if posture didn't trigger
     if not posture_triggered and 'latest_prediction' in s and s['latest_prediction']:
         pred = s['latest_prediction']
-        if pred.get('abstained') == False and pred.get('probabilities') and pred['probabilities'][1] > 0.6:
-            if s.get('model_evidence_since') is None:
-                s['model_evidence_since'] = current_time_s
-            
-            if current_time_s - s['model_evidence_since'] >= 30:
-                if pred.get('features') and pred['features'][8] > 0.35:
-                    if decision['result'] == 'no_action':
-                        decision.update(result='suppressed', reason_codes=['high_motion'])
-                elif is_intervention_active(s['id']) or current_time_s - s.get('last_prompt_breathing', -1000) < s.get('cooldown_breathing', 240):
-                    if decision['result'] == 'no_action':
-                        decision.update(result='suppressed', reason_codes=['active_prompt_or_cooldown_breathing'])
-                else:
-                    prompt = {'id': str(uuid.uuid4()), 'session_id': s['id'], 'type': 'breathing', 'status': 'offered', 'text': 'Take a moment to breathe and reset.', 'source': 'Synthetic Model', 'event_time_s': current_time_s}
-                    execute('INSERT INTO interventions VALUES(:id,:sid,:body)', {'id': prompt['id'], 'sid': s['id'], 'body': json.dumps(prompt)})
-                    s['last_prompt_breathing'] = current_time_s
-                    event(s, 'intervention', prompt)
-                    decision.update(result='triggered', reason_codes=['model_sustained_evidence'])
+        if pred.get('abstained') == False and pred.get('probabilities'):
+            import os
+            from pathlib import Path
+            registry_path = Path(os.environ.get('NEXORA_ROOT', Path(__file__).resolve().parents[3])) / 'models' / 'registry' / 'active.json'
+            threshold = None
+            if registry_path.exists():
+                try:
+                    active = json.loads(registry_path.read_text())
+                    threshold = active.get('threshold')
+                except Exception as e:
+                    import logging
+                    logging.warning(f"Failed to read threshold: {e}")
+                    
+            if threshold is None:
+                import logging
+                logging.warning("No threshold found in active model metadata. Safely abstaining from model interventions.")
+                threshold = 1.1 # Impossible to trigger
+
+            if pred['probabilities'][1] > threshold:
+                if s.get('model_evidence_since') is None:
+                    s['model_evidence_since'] = current_time_s
+                
+                if current_time_s - s['model_evidence_since'] >= 30:
+                    if pred.get('features') and pred['features'][8] > 0.35:
+                        if decision['result'] == 'no_action':
+                            decision.update(result='suppressed', reason_codes=['high_motion'])
+                    elif is_intervention_active(s['id']) or current_time_s - s.get('last_prompt_breathing', -1000) < s.get('cooldown_breathing', 240):
+                        if decision['result'] == 'no_action':
+                            decision.update(result='suppressed', reason_codes=['active_prompt_or_cooldown_breathing'])
+                    else:
+                        prompt = {'id': str(uuid.uuid4()), 'session_id': s['id'], 'type': 'breathing', 'status': 'offered', 'text': 'Take a moment to breathe and reset.', 'source': 'Synthetic Model', 'event_time_s': current_time_s}
+                        execute('INSERT INTO interventions VALUES(:id,:sid,:body)', {'id': prompt['id'], 'sid': s['id'], 'body': json.dumps(prompt)})
+                        s['last_prompt_breathing'] = current_time_s
+                        event(s, 'intervention', prompt)
+                        decision.update(result='triggered', reason_codes=['model_sustained_evidence'])
+            else:
+                s['model_evidence_since'] = None
         else:
             s['model_evidence_since'] = None
 

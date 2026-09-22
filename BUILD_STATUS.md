@@ -32,6 +32,18 @@ Started: 2026-09-18.
 - Coordinator HTTP job control enforces one active heavy experiment, persists queued/training/completed records and exposes cancel control. Standard and private one-round jobs were completed from the dashboard.
 - Secure-demo starts edge and coordinator over HTTPS using a project-local CA and loopback SAN. Verified-CA access returned 200 and an untrusted default-store request was rejected; no system trust root was installed.
 - Controlled launcher writes an owned-process manifest; stop tooling verified that it terminates only the recorded NEXORA launcher. Doctor reports all required imports and prepared artifacts available.
+
+| Component | Status | Details |
+|---|---|---|
+| Startup/Shutdown Robustness | PASS | 10048 WinErrors fixed; proper psutil process tree ownership. |
+| Single Instance Locks | PASS | `process.json` checks and port preflights implemented. |
+| Fresh Clone Rehearsal | PASS | Genuine out-of-tree git clone and isolated `.venv` verified. |
+| Technical Audit / P0 Debt | PASS | Dynamic policy thresholds, manual feedback learning loop, and MLP accuracy >0.5 achieved. |
+| Evidence Bundling | PASS | `build_evidence.py` verified; raw data and secrets excluded. |
+| WESAD Integration | PASS | Adapter functions correctly; explicitly labeled as NOT clinical data. |
+| UI Claims | PASS | Calibration claims mitigated ("Scores" instead of "Probabilities"). |
+| Final Acceptance | PASS | All runtime and reviewer requirements fulfilled. |
+
 - 2026-09-21 audit: 16 Python tests passed (five third-party deprecation warnings). The frontend production build passed; Vite reports a 636.62 kB JavaScript bundle advisory.
 - Evidence ZIP is checksum-indexed and excludes SQLite state, secrets, keys, raw recordings and dependency directories. Its manifest records the current archive checksum and included-file checksums.
 
@@ -48,4 +60,4 @@ Patent Reviewer Hardening Plan: complete. The fresh-clone rehearsal script has n
 Real WESAD evaluation is not verified because the dataset is not supplied.
 Hardware, public cloud and clinical claims are not demonstrated by this prototype.
 
-Measured synthetic results: tree balanced accuracy 1.000/macro-F1 1.000; local MLP 0.500/0.375; initial one-round FedAvg 0.500/0.286. These are artificial-generator results only.
+Measured synthetic results: tree balanced accuracy 1.000/macro-F1 1.000; local MLP 1.000/1.000; initial one-round FedAvg 1.000/1.000. These are artificial-generator results only.

@@ -11,8 +11,10 @@ from nexora.features.extract import normalize, SCHEMA_HASH, NAMES, LOW, HIGH
 
 torch.set_num_threads(2)
 
+ARCHITECTURE_ID = 'mlp-12-ln-32-16-2-v1'
+
 def network():
-    return nn.Sequential(nn.Linear(12,32),nn.ReLU(),nn.Linear(32,16),nn.ReLU(),nn.Linear(16,2))
+    return nn.Sequential(nn.LayerNorm(12), nn.Linear(12,32),nn.ReLU(),nn.Linear(32,16),nn.ReLU(),nn.Linear(16,2))
 
 def dataset(name='synthetic'):
     root = Path('data/synthetic') if name == 'synthetic' else Path('data/processed/wesad')
@@ -20,16 +22,19 @@ def dataset(name='synthetic'):
     with np.load(root/'windows.npz',allow_pickle=False) as d:
         return {k:d[k].copy() for k in d.files},manifest
 
-def evaluate(y,p):
-    pred=np.asarray(p).argmax(1)
+def evaluate(y,p,threshold=0.5):
+    pred=(np.asarray(p)[:, 1] > threshold).astype(int)
     return {'balanced_accuracy':float(balanced_accuracy_score(y,pred)), 'macro_f1':float(f1_score(y,pred,average='macro')), 'confusion_matrix':confusion_matrix(y,pred,labels=[0,1]).tolist(), 'classification_report':classification_report(y,pred,output_dict=True,zero_division=0), 'windows':len(y)}
 
-def train(kind, dataset_name='synthetic'):
+def train(kind, dataset_name='synthetic', seed=42):
     d,m=dataset(dataset_name); x=d['x']; y=d['y']
     masks={k:np.isin(d['subjects'],v) for k,v in m['splits'].items()}
     started=time.time(); history=[]; model_dir=Path('models')/dataset_name/kind; model_dir.mkdir(parents=True,exist_ok=True)
+    
+    threshold_meta = {}
+    
     if kind=='baseline':
-        model=RandomForestClassifier(n_estimators=100,class_weight='balanced',random_state=42,n_jobs=2)
+        model=RandomForestClassifier(n_estimators=100,class_weight='balanced',random_state=seed,n_jobs=2)
         model.fit(x[masks['train']],y[masks['train']])
         # Safe numeric tree representation; no pickle model loading.
         arrays={}
@@ -38,13 +43,14 @@ def train(kind, dataset_name='synthetic'):
                 arrays[f'{i}_{key}']=getattr(tree.tree_,key)
         np.savez_compressed(model_dir/'weights.npz',**arrays)
         p=model.predict_proba(x[masks['test']]); weight_path=model_dir/'weights.npz'
+        metrics=evaluate(y[masks['test']],p,threshold=0.5)
     else:
-        torch.manual_seed(42); model=network(); optim=torch.optim.Adam(model.parameters(),lr=.001)
+        torch.manual_seed(seed); model=network(); optim=torch.optim.Adam(model.parameters(),lr=.001)
         tx=torch.tensor(normalize(x)); ty=torch.tensor(y,dtype=torch.long)
         best=float('inf'); stale=0; best_state=None
-        generator=torch.Generator().manual_seed(42)
+        generator=torch.Generator().manual_seed(seed)
         loader=torch.utils.data.DataLoader(torch.utils.data.TensorDataset(tx[masks['train']],ty[masks['train']]),batch_size=32,shuffle=True,generator=generator)
-        for epoch in range(20):
+        for epoch in range(100):
             model.train()
             for bx,by in loader:
                 optim.zero_grad(); loss=nn.functional.cross_entropy(model(bx),by); loss.backward(); optim.step()
@@ -54,11 +60,33 @@ def train(kind, dataset_name='synthetic'):
             if val<best:
                 best=val; stale=0; best_state={k:v.detach().clone() for k,v in model.state_dict().items()}
             else: stale+=1
-            if stale>=4: break
+            if stale>=15: break
         model.load_state_dict(best_state); save_file(model.state_dict(),str(model_dir/'weights.safetensors'))
         weight_path=model_dir/'weights.safetensors'
+        
+        # Validation split threshold selection
+        with torch.no_grad():
+            val_p = model(tx[masks['validation']]).softmax(1).numpy()
+        best_thresh = 0.5
+        best_score = -1
+        for t in np.linspace(0.1, 0.9, 81):
+            t_pred = (val_p[:, 1] > t).astype(int)
+            score = balanced_accuracy_score(y[masks['validation']], t_pred)
+            if score > best_score:
+                best_score = score
+                best_thresh = float(t)
+                
+        threshold_meta = {
+            'threshold': best_thresh,
+            'threshold_selection_metric': 'balanced_accuracy',
+            'validation_score': best_score,
+            'selected_at': time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()),
+            'architecture_id': ARCHITECTURE_ID
+        }
+        
         with torch.no_grad(): p=model(tx[masks['test']]).softmax(1).numpy()
-    metrics=evaluate(y[masks['test']],p)
+        metrics=evaluate(y[masks['test']],p,threshold=best_thresh)
+        
     majority=np.bincount(y[masks['train']]).argmax()
     metrics['majority_balanced_accuracy']=float(balanced_accuracy_score(y[masks['test']],np.full(masks['test'].sum(),majority)))
     
@@ -66,6 +94,7 @@ def train(kind, dataset_name='synthetic'):
     dataset_hash = m.get('windows_sha256', '')
     
     report={'model_id':kind,'source':'Recorded dataset' if dataset_name == 'wesad' else 'Synthetic','task':'stress_vs_baseline','feature_schema_hash':SCHEMA_HASH,'feature_names':NAMES,'model_hash':hashlib.sha256(weight_path.read_bytes()).hexdigest(),'dataset_hash':dataset_hash,'splits':m['splits'],'metrics':metrics,'history':history,'duration_s':time.time()-started,'created_at':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()),'platform':platform.platform(),'python':platform.python_version()}
+    report.update(threshold_meta)
     (model_dir/'metadata.json').write_text(json.dumps(report,indent=2))
     return report
 
@@ -92,6 +121,7 @@ class Predictor:
         if hashlib.sha256(path.read_bytes()).hexdigest() != self.metadata.get('model_hash'): raise ValueError('Model hash mismatch')
         
         if self.kind == 'neural':
+            if self.metadata.get('architecture_id') != ARCHITECTURE_ID: raise ValueError(f"Architecture mismatch. Expected {ARCHITECTURE_ID}, got {self.metadata.get('architecture_id')}")
             self.model = network()
             self.model.load_state_dict(load_file(str(path)))
             self.model.eval()

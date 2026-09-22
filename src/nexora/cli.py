@@ -7,7 +7,7 @@ def main():
     data=sub.add_parser('data').add_subparsers(dest='action',required=True)
     gen=data.add_parser('generate'); gen.add_argument('--seed',type=int,default=42); gen.add_argument('--profile',default='demo')
     wesad=data.add_parser('import-wesad'); wesad.add_argument('--path',required=True); wesad.add_argument('--trusted-original',action='store_true')
-    training=sub.add_parser('train'); training.add_argument('kind',choices=['baseline','neural']); training.add_argument('--dataset',choices=['synthetic','wesad'],default='synthetic')
+    training=sub.add_parser('train'); training.add_argument('kind',choices=['baseline','neural']); training.add_argument('--dataset',choices=['synthetic','wesad'],default='synthetic'); training.add_argument('--seed',type=int,default=42)
     experiment=sub.add_parser('experiment').add_subparsers(dest='action',required=True)
     run=experiment.add_parser('run'); run.add_argument('--mode',choices=['federated','private-federated'],required=True); run.add_argument('--dataset',choices=['synthetic','wesad'],default='synthetic'); run.add_argument('--rounds',type=int,default=5)
     args=parser.parse_args()
@@ -17,7 +17,7 @@ def main():
         result=import_directory(args.path,trusted_original=args.trusted_original)
     elif args.command=='train':
         from nexora.ml.train import train
-        result=train(args.kind, dataset_name=args.dataset)
+        result=train(args.kind, dataset_name=args.dataset, seed=args.seed)
     else:
         from nexora.federation.experiment import run
         result=run(rounds=args.rounds,private=args.mode=='private-federated',dataset=args.dataset)
