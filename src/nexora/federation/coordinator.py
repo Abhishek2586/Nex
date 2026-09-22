@@ -121,6 +121,7 @@ def activate_model(run_id: str, body: dict = None):
         'round': round_number,
         'model_hash': round_meta['model_hash'],
         'feature_schema_hash': manifest.get('feature_schema_hash', ''),
+        'architecture_id': 'mlp-12-ln-32-16-2-v1',
         'artifact_path': str(safetensor_path),
         'metrics': round_meta.get('metrics', {}),
         'activated_at': time.time()

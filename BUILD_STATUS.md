@@ -4,7 +4,7 @@ Started: 2026-09-18.
 
 ## Completion Levels
 - Core synthetic software prototype: PASS
-- Reviewer hardening: PARTIAL
+- Reviewer hardening: PASS
 - Real WESAD validation: PARTIAL (Split handling/CLI implemented; files absent)
 - Physical embodiment: NOT BUILT
 - Public/cloud deployment: OUT OF SCOPE

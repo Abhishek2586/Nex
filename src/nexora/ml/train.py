@@ -105,7 +105,8 @@ class Predictor:
             active = json.loads(registry_path.read_text())
             self.kind = active['model_id']
             dataset = active['source']
-            root = Path(active['artifact_path']) if 'artifact_path' in active else Path('models') / dataset / self.kind
+            artifact_path = Path(active['artifact_path']) if 'artifact_path' in active else Path('models') / dataset / self.kind
+            root = artifact_path if artifact_path.is_dir() else artifact_path.parent
             self.metadata = active
         else:
             self.kind = kind or 'neural'
@@ -117,7 +118,10 @@ class Predictor:
             
         if self.metadata.get('feature_schema_hash') != SCHEMA_HASH: raise ValueError('Feature schema mismatch')
         
-        path = root / ('weights.safetensors' if self.kind == 'neural' else 'weights.npz')
+        if 'artifact_path' in getattr(self, 'metadata', {}) and Path(self.metadata['artifact_path']).is_file():
+            path = Path(self.metadata['artifact_path'])
+        else:
+            path = root / ('weights.safetensors' if self.kind == 'neural' else 'weights.npz')
         if hashlib.sha256(path.read_bytes()).hexdigest() != self.metadata.get('model_hash'): raise ValueError('Model hash mismatch')
         
         if self.kind == 'neural':
