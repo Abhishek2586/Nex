@@ -1,26 +1,11 @@
-# Final Handoff
+# Final handoff
 
-The NEXORA research prototype has been successfully built according to the specification.
+Project: `D:\Downloads\Nexora`.
 
-## What is Included
-- A complete, offline software-in-the-loop prototype.
-- Synthetic deterministic data generators.
-- Local federated learning and differential privacy implementations.
-- A functional React dashboard and FastAPI backend services.
-- Passing test suite and reproducible build scripts.
+Prepare once with `\.venv\Scripts\python.exe scripts\prepare_demo.py`. Start the offline local demo with `\.venv\Scripts\python.exe scripts\start.py --profile demo`, then open `http://127.0.0.1:8080`. Stop only the owned launcher and client services with `\.venv\Scripts\python.exe scripts\stop.py`.
 
-## How to Run the Demo
-1. Run `python scripts/bootstrap.py` (already done).
-2. Run `python scripts/prepare_demo.py` (already done).
-3. Run `python scripts/start.py --profile demo`.
-4. Open the displayed local URL in your browser.
+The working path is explicitly **Synthetic**: participant-separated generated data, a random forest and MLP, local replay, FastAPI/SQLite persistence, explanations, three loopback training services, sample-weighted FedAvg, Opacus accounting and a React dashboard. User interaction is labelled **Manual feedback**. The edge continues cached inference while the coordinator is unavailable.
 
-To stop the services, run `python scripts/stop.py`.
+Run `\.venv\Scripts\python.exe scripts\verify.py` for the backend suite, frontend production build and evidence rebuild. The report and demo instructions are in `artifacts/reports/PERFORMANCE.md` and `docs/DEMO_SCRIPT.md`; the export is `artifacts/reports/nexora-evidence.zip`.
 
-## Artifacts and Evidence
-All generated artifacts, logs, and evidence bundles are located in `artifacts/`.
-You can rebuild the evidence bundle at any time by running `python scripts/build_evidence.py`.
-
-## WESAD Dataset Note
-The WESAD dataset is not bundled with this prototype due to licensing and size constraints. 
-To validate the pipeline on real data, please obtain the WESAD dataset and place it in `data/raw/wesad/`, then run the `import-wesad` command.
+WESAD is an optional **Recorded dataset** path. Its importer is present but no WESAD files, model run or recorded-data metric is included. Hardware, embedded deployment, secure aggregation, public cloud deployment, clinical validation and patent/legal conclusions remain outside what this project demonstrates.

@@ -152,6 +152,13 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow
 
 .metric { font-family: var(--font-heading); font-size: 42px; font-weight: 700; color: var(--accent-teal); display: block; margin: 10px 0; }
 
+.participant-hero { background: linear-gradient(135deg, #0a5964, #087f83); color: white; border-radius: 12px; padding: 32px; margin-bottom: 24px; box-shadow: 0 10px 24px rgba(8,127,131,.18); }
+.participant-hero h2 { color: white; font-family: var(--font-heading); margin: 8px 0; font-size: 28px; }
+.participant-hero p { max-width: 680px; color: rgba(255,255,255,.9); margin: 0 0 16px; }
+.participant-hero .badge { background: rgba(255,255,255,.15); color: white; }
+.guidance { border-left: 4px solid var(--accent-teal); }
+.participant-signals .card strong { font-size: 24px; }
+
 article { padding: 24px 0; border-bottom: 1px solid var(--border-light); }
 article:last-child { border-bottom: none; padding-bottom: 0; }
 article h3 { font-family: var(--font-heading); font-size: 18px; margin: 12px 0 8px; color: var(--text-main); }
@@ -196,4 +203,14 @@ footer { font-size: 12px; font-weight: 500; color: var(--text-muted); text-align
   nav a span:first-child { width: auto; font-size: 20px; margin: 0; }
   main { margin-left: 80px; width: calc(100% - 80px); }
   section { padding: 24px; }
+}
+@media(max-width: 600px) {
+  section { padding: 18px; }
+  header { padding: 14px 18px; align-items: flex-start; flex-direction: column; }
+  .badges { flex-wrap: wrap; }
+  .stats { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .participant-hero { padding: 22px; }
+  .participant-hero h2 { font-size: 23px; }
+  .controls { align-items: stretch; }
+  .controls label, .controls button { width: 100%; }
 }

@@ -1,35 +1,22 @@
-# NEXORA Acceptance Report
+# NEXORA acceptance report
 
-This report tracks the fulfillment of the completion criteria specified in `NEXORA_CODEX_MASTER_BUILD.md` and `NEXORA_PATENT_REVIEWER_HARDENING_PLAN.md`.
+Updated: 2026-09-21.
 
-## Completion Levels
+| Evidence level | Status | What the repository demonstrates |
+|---|---|---|
+| Core Synthetic software loop | Passed | Generated data, replay, feature extraction, local inference, explanations, feedback, three local client services, FedAvg, Opacus ledger and evidence export. |
+| Reviewer hardening | Partial | The UI, REST service separation, model activation and focused integration tests are implemented. The local Playwright suite passed on 2026-09-21; a clean-clone rehearsal and frontend component-unit tests remain open. |
+| Recorded-data validation | Not verified | WESAD adapter and parser tests exist; no authorized WESAD subject data, model training or measured WESAD result is present. |
+| Physical embodiment | Not built | No physical sensor, haptic output, wearable, hospital interface or embedded equivalence test. |
+| Clinical or patent conclusion | Not determined | This software evidence does not establish efficacy, safety, novelty, validity or grant. |
 
-1.  **Core synthetic software loop:** Passed.
-2.  **Reviewer hardening:** Passed. Three distinct services, model activation, full browser tests, dual-mode UI are complete.
-3.  **Real-data validation:** Partial. WESAD import and data splits implemented; WESAD data itself is intentionally not included in the repository.
-4.  **Physical embodiment:** Not tested. Hardware not connected.
-5.  **Patent/legal examination:** Not tested.
+## Verified on this workspace
 
-## Feature Verification
+- Python integration tests cover malformed session requests, valid state transitions, origin rejection, WebSocket catch-up, safe event schemas, feedback handling, features, explanations, federation math and WESAD adapter behavior.
+- The posture scenario creates a browser prompt and persists **Manual feedback**. The missing-data scenario abstains rather than substituting a score.
+- Standard and private federation transmit tensor updates between loopback services. They do not use secure aggregation and all processes run on the same host.
+- Opacus accounting is real for non-overlapping 30-second **Synthetic** windows. The executed ledger is experimental non-cryptographic randomness, so it is not a patient-level guarantee.
 
-*   [x] Deterministic physiological/context scenario generation and timed replay.
-*   [x] A real preprocessing, feature-extraction and model-inference pipeline.
-*   [x] Automatic software interventions (model-driven intervention policy).
-*   [x] A polished dual-mode React dashboard (User / Research).
-*   [x] A measured tree baseline and small neural model.
-*   [x] Genuine federated neural-network training across three independent REST services.
-*   [x] Genuine private local training with Opacus and persistent privacy accounting.
-*   [x] Actual SHAP / Integrated Gradients attribution logic running live on predictions.
-*   [x] Formal schemas and SQLite data persistence.
-*   [x] A cryptographic checksum-based evidence package generator.
-*   [x] WESAD subject-level split import and training capability.
-*   [x] Real browser E2E verification with Playwright.
+## Current measured Synthetic results
 
-## Evidence Checksum
-
-The evidence ZIP package (if generated) guarantees the consistency of the codebase during review.mo and exportable evidence.
-*   [ ] Automated functional tests plus Playwright e2e test suite.
-*   [ ] One-command setup/start/stop/demo workflows and a clear handoff.
-
-## Clean-Start Rehearsal
-A clean run of the bootstrap, demo preparation, UI tests, and integration test suite execution has been fully verified and is complete. Reviewer hardening is concluded.
+Random forest: balanced accuracy 1.000, macro-F1 1.000 on 120 artificial held-out windows. Local MLP: 0.500 / 0.375. The recorded first non-private federated run: 0.500 / 0.286. The recorded private run: 0.500 / 0.375. These results measure the generated data construction only.

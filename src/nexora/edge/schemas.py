@@ -3,8 +3,10 @@ from pydantic import BaseModel, Field
 from typing import Optional
 
 class SessionRequest(BaseModel):
-    scenario: str = 'normal'
-    speed: int = Field(default=5)
+    # Creating a session is an explicit user action.  Requiring both values
+    # prevents an accidental POST from silently creating an unexpected replay.
+    scenario: str
+    speed: int
     seed: int = Field(default=42, ge=0, le=1000000)
 
 class FeedbackRequest(BaseModel):

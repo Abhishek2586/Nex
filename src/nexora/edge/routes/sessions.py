@@ -43,8 +43,14 @@ def control(sid: str, action: str):
     s = get(sid)
     if action not in ['start', 'pause', 'stop']:
         raise HTTPException(404, 'Unknown action')
-    if s['status'] == 'stopped':
-        raise HTTPException(409, 'Stopped sessions cannot resume')
-    s['status'] = {'start': 'running', 'pause': 'paused', 'stop': 'stopped'}[action]
+    transitions = {
+        'start': {'paused': 'running'},
+        'pause': {'running': 'paused'},
+        'stop': {'paused': 'stopped', 'running': 'stopped'},
+    }
+    next_status = transitions[action].get(s['status'])
+    if next_status is None:
+        raise HTTPException(409, f"Cannot {action} a session that is {s['status']}")
+    s['status'] = next_status
     save(s)
     return s

@@ -14,7 +14,9 @@ for child in record.get('children',[]):
         child_process=psutil.Process(int(child['pid']))
         child_command=' '.join(child_process.cmdline()).lower()
         child_cwd=Path(child_process.cwd()).resolve()
-        if child_cwd==root.resolve() and 'nexora.federation.coordinator:app' in child_command:
+        role=child.get('role')
+        expected_module = 'nexora.federation.coordinator:app' if role == 'coordinator' else 'nexora.edge.app:app'
+        if role in {'coordinator', 'client-b', 'client-c'} and child_cwd==root.resolve() and expected_module in child_command:
             child_process.terminate()
             try: child_process.wait(timeout=10)
             except psutil.TimeoutExpired: pass

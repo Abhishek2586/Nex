@@ -7,6 +7,8 @@ from nexora.edge.schemas import ExperimentRequest
 
 router = APIRouter()
 ROOT = Path(__file__).resolve().parents[4]
+_projection_cache = []
+_projection_cache_key = None
 
 def coordinator_request(method, path, **kwargs):
     base = os.environ.get('NEXORA_COORDINATOR_URL', 'http://127.0.0.1:8100')
@@ -96,13 +98,19 @@ def privacy():
 
 @router.get('/privacy/projection')
 def privacy_projection():
+    global _projection_cache, _projection_cache_key
     try:
         from opacus.accountants import RDPAccountant
     except ImportError:
         return []
 
+    paths = sorted((ROOT / 'runtime').glob('client-*/privacy.json'))
+    cache_key = tuple((str(path), path.stat().st_mtime_ns) for path in paths)
+    if cache_key == _projection_cache_key:
+        return _projection_cache
+
     ledgers = []
-    for path in (ROOT / 'runtime').glob('client-*/privacy.json'):
+    for path in paths:
         try:
             ledger = json.loads(path.read_text())
             delta = ledger.get("delta", 1e-5)
@@ -125,7 +133,9 @@ def privacy_projection():
             test_proj = RDPAccountant()
             test_proj.history = [tuple(item) for item in ledger.get("history", [])]
             remaining = 0
-            while test_proj.get_epsilon(delta) <= 8.0 and remaining < 100:
+            # The UI needs a small planning hint, not an expensive unbounded
+            # accountant simulation on every two-second dashboard refresh.
+            while test_proj.get_epsilon(delta) <= 8.0 and remaining < 20:
                 test_proj.history.append((last_noise, last_sample_rate, last_steps))
                 remaining += 1
                 
@@ -138,7 +148,9 @@ def privacy_projection():
             })
         except Exception:
             pass
-    return sorted(ledgers, key=lambda item: item["client_id"])
+    _projection_cache = sorted(ledgers, key=lambda item: item["client_id"])
+    _projection_cache_key = cache_key
+    return _projection_cache
 
 from fastapi.responses import JSONResponse
 

@@ -4,7 +4,7 @@ Started: 2026-09-18.
 
 ## Completion Levels
 - Core synthetic software prototype: PASS
-- Reviewer hardening: PASS
+- Reviewer hardening: PARTIAL (end-to-end flow passes; no frontend component-unit tests exist and recorded-data/physical validation remain open)
 - Real WESAD validation: PARTIAL (Split handling/CLI implemented; files absent)
 - Physical embodiment: NOT BUILT
 - Public/cloud deployment: OUT OF SCOPE
@@ -32,19 +32,19 @@ Started: 2026-09-18.
 - Coordinator HTTP job control enforces one active heavy experiment, persists queued/training/completed records and exposes cancel control. Standard and private one-round jobs were completed from the dashboard.
 - Secure-demo starts edge and coordinator over HTTPS using a project-local CA and loopback SAN. Verified-CA access returned 200 and an untrusted default-store request was rejected; no system trust root was installed.
 - Controlled launcher writes an owned-process manifest; stop tooling verified that it terminates only the recorded NEXORA launcher. Doctor reports all required imports and prepared artifacts available.
-- Current automated suite: 11 passed. Five third-party deprecation warnings do not affect behavior. Frontend production build passed.
-- Evidence ZIP is checksum-indexed and excludes SQLite state, secrets, keys, raw recordings and dependency directories.
+- 2026-09-21 audit: 16 Python tests passed (five third-party deprecation warnings). The frontend production build passed; Vite reports a 636.62 kB JavaScript bundle advisory.
+- Evidence ZIP is checksum-indexed and excludes SQLite state, secrets, keys, raw recordings and dependency directories. Its manifest records the current archive checksum and included-file checksums.
 
 ## Current work
-Patent Reviewer Hardening Plan implemented and fully completed. Clean clone verification script implemented.
+Patent Reviewer Hardening Plan: partial implementation. The fresh-clone rehearsal script exists but has not been accepted as evidence until it completes successfully in this environment.
 
 ## Verified work addition
 - Added `scripts/fresh_clone_rehearsal.py` for automated pipeline checkout.
-- Automated comprehensive UI coverage added via Playwright spanning normal, pause, missing-data, intervention, model activation and federation test cases. E2E execution connected to GitHub Actions CI over a real backend.
+- Playwright scenarios for participant navigation and the complete research flow passed on 2026-09-21 against `http://127.0.0.1:8080` (2 tests, one worker). The Vitest command correctly reports no component-unit tests present.
 - Expanded integration tests targeting failure states and API edge cases.
 
 ## Not yet verified
-Real WESAD evaluation is not applicable as the dataset is not supplied.
-Hardware/cloud/clinical claims are out of scope for this prototype.
+Real WESAD evaluation is not verified because the dataset is not supplied.
+Hardware, public cloud and clinical claims are not demonstrated by this prototype.
 
 Measured synthetic results: tree balanced accuracy 1.000/macro-F1 1.000; local MLP 0.500/0.375; initial one-round FedAvg 0.500/0.286. These are artificial-generator results only.

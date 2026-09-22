@@ -50,9 +50,10 @@ if __name__=='__main__':
         try:
             if ssl_options:
                 import ssl
-                ctx = ssl.create_default_context()
-                ctx.check_hostname = False
-                ctx.verify_mode = ssl.CERT_NONE
+                # The secure profile is meaningful only when the launcher also
+                # verifies the generated project CA.  Do not bypass TLS checks
+                # just to make startup succeed.
+                ctx = ssl.create_default_context(cafile=str(certs / 'ca.pem'))
                 urllib.request.urlopen(coord_url, context=ctx)
             else:
                 urllib.request.urlopen(coord_url)

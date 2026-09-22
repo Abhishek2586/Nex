@@ -12,9 +12,10 @@ STATIC = [
     "configs/source_catalog.json", "configs/feature_schema.json", "docs/PRIVACY_AND_THREAT_MODEL.md",
     "docs/CLAIM_IMPLEMENTATION_MAP.md", "docs/EXPERIMENT_PROTOCOL.md", "docs/DEMO_SCRIPT.md",
     "docs/EXAM_QA.md", "docs/USER_GUIDE.md", "docs/FINAL_HANDOFF.md",
-    "artifacts/reports/NEXORA_TECHNICAL_REPORT.md", "artifacts/reports/NEXORA_TECHNICAL_REPORT.html",
+    "artifacts/reports/NEXORA_TECHNICAL_REPORT.md",
+    "artifacts/reports/PERFORMANCE.md",
     "artifacts/demo/DEMO_SCRIPT.md", "data/synthetic/manifest.json",
-    "models/baseline/metadata.json", "models/neural/metadata.json",
+    "models/synthetic/baseline/metadata.json", "models/synthetic/neural/metadata.json",
     "artifacts/reports/coordinator-outage.json",
     "artifacts/reports/tls-verification.json",
 ]
