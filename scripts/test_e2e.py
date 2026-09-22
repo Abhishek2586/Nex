@@ -82,15 +82,19 @@ def main():
     
     res = subprocess.run([npx, "playwright", "test", "--reporter=list,json"], cwd=root/"frontend", env=env)
     
-    tests_passed = "unknown"
-    tests_failed = "unknown"
+    expected = 0
+    unexpected = 0
+    flaky = 0
+    skipped = 0
     
     if json_report.exists():
         try:
             pw_res = json.loads(json_report.read_text())
             stats = pw_res.get('stats', {})
-            tests_passed = stats.get('expected', 0)
-            tests_failed = stats.get('unexpected', 0) + stats.get('flaky', 0)
+            expected = stats.get('expected', 0)
+            unexpected = stats.get('unexpected', 0)
+            flaky = stats.get('flaky', 0)
+            skipped = stats.get('skipped', 0)
         except Exception:
             pass
             
@@ -100,7 +104,16 @@ def main():
     except Exception as e:
         cleanup_result = f"FAIL: {e}"
         
-    end_time = datetime.datetime.utcnow().isoformat() + 'Z'
+    import socket
+    ports_free = True
+    for p in [port, port_b, port_c, coord_port]:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            if s.connect_ex(('127.0.0.1', p)) == 0:
+                ports_free = False
+                cleanup_result = f"FAIL: Port {p} still occupied"
+                break
+                
+    end_time = datetime.datetime.now(datetime.timezone.utc).isoformat()
     
     report = {
         "commit": get_git_commit(),
@@ -110,8 +123,11 @@ def main():
         "coordinator_url": f"http://127.0.0.1:{coord_port}",
         "owned_pids": pids,
         "playwright_exit_code": res.returncode,
-        "tests_passed": tests_passed,
-        "tests_failed": tests_failed,
+        "expected": expected,
+        "unexpected": unexpected,
+        "flaky": flaky,
+        "skipped": skipped,
+        "ports_released": ports_free,
         "cleanup_result": cleanup_result
     }
     
@@ -119,7 +135,10 @@ def main():
     report_path.write_text(json.dumps(report, indent=2))
     print(f"Wrote E2E report to {report_path}")
     
-    sys.exit(res.returncode)
+    if unexpected > 0 or flaky > 0 or res.returncode != 0:
+        sys.exit(1)
+    else:
+        sys.exit(0)
 
 if __name__ == '__main__':
     main()

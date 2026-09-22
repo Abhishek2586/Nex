@@ -4,7 +4,7 @@ Started: 2026-09-18.
 
 ## Completion Levels
 - Core synthetic software prototype: PASS
-- Reviewer hardening: PASS (cross-platform robust verification, Playwright E2E isolation, and dynamic Pytest configurations verified on Windows; clean-start rehearsal passes successfully)
+- Reviewer hardening: PARTIAL
 - Real WESAD validation: PARTIAL (Split handling/CLI implemented; files absent)
 - Physical embodiment: NOT BUILT
 - Public/cloud deployment: OUT OF SCOPE
