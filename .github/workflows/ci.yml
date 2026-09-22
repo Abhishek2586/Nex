@@ -36,7 +36,7 @@ jobs:
 
     - name: Run pytest
       run: |
-        mkdir -p /tmp/nexora-pytest-tmp
+        mkdir -p /tmp/nexora-pytest-tmp reports
         pytest tests/ -v --junitxml=reports/pytest.xml --basetemp=/tmp/nexora-pytest-tmp
     
     - name: Set up Node.js
