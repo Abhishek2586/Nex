@@ -33,8 +33,8 @@ def main():
     parser.add_argument('--restart', action='store_true', help='Restart running NEXORA processes')
     args = parser.parse_args()
     
-    if not (root / 'frontend/dist/index.html').exists() or not (root / 'models/registry/active.json').exists():
-        raise SystemExit('Prepared frontend/model artifacts are missing. Run the preparation commands documented in README.md.')
+    if not (root / 'frontend/dist/index.html').exists():
+        raise SystemExit('Prepared frontend artifacts are missing. Run the preparation commands documented in README.md.')
         
     manifest = root / 'runtime/control/process.json'
     manifest.parent.mkdir(parents=True, exist_ok=True)

@@ -106,10 +106,8 @@ def main():
             ("Install Backend Deps", [clone_python, "-m", "pip", "install", "-e", ".[dev]"], clone_dir),
             ("Install Frontend Deps", [npm, "install"], clone_dir/"frontend"),
             ("Bootstrap", [clone_python, "scripts/bootstrap.py"], clone_dir),
-            ("Start Backend", [clone_python, "scripts/start.py"], clone_dir),
             ("Prepare Demo", [clone_python, "scripts/prepare_demo.py"], clone_dir),
             ("Doctor", [clone_python, "scripts/doctor.py"], clone_dir),
-            ("Stop Backend", [clone_python, "scripts/stop.py"], clone_dir),
             ("Pytest", [clone_python, "-m", "pytest", "-q", "-p", "no:cacheprovider", f"--basetemp={basetemp}", "tests/"], clone_dir),
             ("Frontend Build", [npm, "run", "build"], clone_dir/"frontend"),
             ("Frontend Unit Tests", [npm, "run", "test"], clone_dir/"frontend"),
@@ -120,11 +118,36 @@ def main():
         
         failed_stage = None
         for name, cmd, cwd in stages:
+            if name == "Prepare Demo":
+                print("[Start Backend] Launching in background...")
+                backend_proc = subprocess.Popen([clone_python, "scripts/start.py"], cwd=clone_dir)
+                import time
+                manifest_path = clone_dir / 'runtime/control/process.json'
+                ready = False
+                for _ in range(60):
+                    if manifest_path.exists():
+                        try:
+                            if json.loads(manifest_path.read_text()).get('pid'):
+                                ready = True
+                                break
+                        except Exception:
+                            pass
+                    time.sleep(1)
+                if not ready:
+                    report["commands"].append({"name": "Start Backend", "exit_code": 1})
+                    failed_stage = "Start Backend"
+                    break
+                report["commands"].append({"name": "Start Backend", "exit_code": 0})
+                
             success, code = run(name, cmd, cwd)
             report["commands"].append({"name": name, "exit_code": code})
             if not success:
                 failed_stage = name
                 break
+                
+            if name == "Doctor":
+                print("[Stop Backend] Shutting down background processes...")
+                subprocess.run([clone_python, "scripts/stop.py"], cwd=clone_dir)
                 
         # Parse test results from clone artifacts
         report["backend_tests_passed"] = None
