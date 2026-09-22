@@ -10,7 +10,7 @@ report={
     'disk_free_gb':round(shutil.disk_usage(root).free/1024**3,2),
     'imports':{name:importlib.util.find_spec(name) is not None for name in modules},
     'frontend_built':(root/'frontend/dist/index.html').exists(),
-    'models_prepared':(root/'models/neural/metadata.json').exists() and (root/'models/baseline/metadata.json').exists(),
+    'models_prepared':(root/'models/registry/active.json').exists(),
     'wesad_status':'unavailable' if not (root/'data/raw/wesad').exists() else 'files_present_not_validated',
 }
 print(json.dumps(report,indent=2))
