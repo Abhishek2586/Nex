@@ -9,10 +9,12 @@ description = "Local software-in-the-loop research prototype"
 requires-python = ">=3.11,<3.14"
 dependencies = ["fastapi", "uvicorn", "websockets", "sqlalchemy", "numpy", "scipy", "pandas", "scikit-learn", "torch", "opacus", "captum", "shap", "safetensors", "httpx", "pyyaml", "psutil", "cryptography", "python-multipart"]
 
+[project.optional-dependencies]
+dev = ["pytest", "flake8", "mypy", "types-PyYAML"]
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src", "."]
 testpaths = ["tests"]
-addopts = "--basetemp=.pytest_temp"

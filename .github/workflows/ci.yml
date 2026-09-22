@@ -64,12 +64,5 @@ jobs:
       run: npx playwright install --with-deps
 
     - name: Run Playwright E2E Tests
-      env:
-        BASE_URL: http://127.0.0.1:8080
       run: |
-        # Start the prepared demo on port 8080 (which serves the frontend dist)
-        python scripts/start.py &
-        sleep 10
-        # Run playwright tests
-        cd frontend
-        npx playwright test
+        python scripts/test_e2e.py

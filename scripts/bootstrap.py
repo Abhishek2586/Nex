@@ -50,12 +50,14 @@ def main():
     # 5. Frontend dependencies
     frontend_dir = ROOT_DIR / "frontend"
     if frontend_dir.exists():
+        npm = "npm.cmd" if sys.platform == "win32" else "npm"
+        npx = "npx.cmd" if sys.platform == "win32" else "npx"
         print("Installing frontend dependencies...")
-        run_command(["npm", "install"], cwd=frontend_dir)
+        run_command([npm, "install"], cwd=frontend_dir)
         print("Installing Playwright browsers...")
-        run_command(["npx", "playwright", "install", "--with-deps", "chromium"], cwd=frontend_dir)
+        run_command([npx, "playwright", "install", "--with-deps", "chromium"], cwd=frontend_dir)
         print("Building frontend...")
-        run_command(["npm", "run", "build"], cwd=frontend_dir)
+        run_command([npm, "run", "build"], cwd=frontend_dir)
     else:
         print("Warning: frontend directory not found.")
 

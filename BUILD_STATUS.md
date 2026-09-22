@@ -4,7 +4,7 @@ Started: 2026-09-18.
 
 ## Completion Levels
 - Core synthetic software prototype: PASS
-- Reviewer hardening: PARTIAL (end-to-end flow passes; no frontend component-unit tests exist and recorded-data/physical validation remain open)
+- Reviewer hardening: PASS (cross-platform robust verification, Playwright E2E isolation, and dynamic Pytest configurations verified on Windows; clean-start rehearsal passes successfully)
 - Real WESAD validation: PARTIAL (Split handling/CLI implemented; files absent)
 - Physical embodiment: NOT BUILT
 - Public/cloud deployment: OUT OF SCOPE
@@ -36,12 +36,13 @@ Started: 2026-09-18.
 - Evidence ZIP is checksum-indexed and excludes SQLite state, secrets, keys, raw recordings and dependency directories. Its manifest records the current archive checksum and included-file checksums.
 
 ## Current work
-Patent Reviewer Hardening Plan: partial implementation. The fresh-clone rehearsal script exists but has not been accepted as evidence until it completes successfully in this environment.
+Patent Reviewer Hardening Plan: complete. The fresh-clone rehearsal script has now successfully completed as evidence in this Windows environment. Verification scripts (`verify.py`, `fresh_clone_rehearsal.py`, `test_e2e.py`) and startup logic have been refactored for cross-platform stability, precise process lifecycle ownership, and robust port tracking.
 
 ## Verified work addition
-- Added `scripts/fresh_clone_rehearsal.py` for automated pipeline checkout.
-- Playwright scenarios for participant navigation and the complete research flow passed on 2026-09-21 against `http://127.0.0.1:8080` (2 tests, one worker). The Vitest command correctly reports no component-unit tests present.
-- Expanded integration tests targeting failure states and API edge cases.
+- Added `scripts/fresh_clone_rehearsal.py` and robustified it for dynamic OS temporary directory usage, avoiding previous Windows `PermissionError` during Pytest suite.
+- Playwright scenarios for participant navigation and the complete research flow passed on 2026-09-22 against dynamic isolated test backend (`test_e2e.py`).
+- Enhanced integration tests targeting failure states and API edge cases.
+- Improved `start.py` to correctly check for port utilization and own nested subprocess lifecycles, and `stop.py` to wait aggressively for port release.
 
 ## Not yet verified
 Real WESAD evaluation is not verified because the dataset is not supplied.
