@@ -27,7 +27,7 @@ def verify_token(authorization: str = Header(None)):
     if token not in tokens.values():
         raise HTTPException(401, 'Invalid service token')
 JOBS=ROOT/'runtime/coordinator/jobs'; JOBS.mkdir(parents=True,exist_ok=True)
-processes={}; lock=threading.Lock()
+processes: dict[str, subprocess.Popen] = {}; lock=threading.Lock()
 
 class ExperimentRequest(BaseModel):
     mode:str
@@ -94,7 +94,7 @@ def cancel(job_id:str):
     job.update(status='cancelled',finished_at=time.time()); _save(job); return job
 
 @app.post('/api/v1/models/{run_id}/activate', dependencies=[Depends(verify_token)])
-def activate_model(run_id: str, body: dict = None):
+def activate_model(run_id: str, body: dict | None = None):
     # 'body' might optionally contain 'round'. If not, default to the last round.
     round_number = body.get('round', 1) if body else 1
     run_path = ROOT / 'artifacts' / 'runs' / run_id

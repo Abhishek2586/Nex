@@ -80,6 +80,7 @@ def train_client(client_id: str, base: Path, output: Path, private: bool):
         optimizer.step()
         steps += 1
     if private:
+        assert privacy is not None
         plain = model._module
         ledger = {
             "client_id": client_id,

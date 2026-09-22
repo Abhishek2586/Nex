@@ -7,7 +7,7 @@ from nexora.edge.schemas import ExperimentRequest
 
 router = APIRouter()
 ROOT = Path(__file__).resolve().parents[4]
-_projection_cache = []
+_projection_cache: list[dict] = []
 _projection_cache_key = None
 
 def coordinator_request(method, path, **kwargs):
