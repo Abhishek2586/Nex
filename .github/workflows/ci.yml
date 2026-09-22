@@ -37,7 +37,9 @@ jobs:
     - name: Run pytest
       run: |
         mkdir -p /tmp/nexora-pytest-tmp reports
-        pytest tests/ -v --junitxml=reports/pytest.xml --basetemp=/tmp/nexora-pytest-tmp
+        pytest tests/ -v --junitxml=reports/pytest.xml --basetemp=/tmp/nexora-pytest-tmp > pytest_output.txt 2>&1 || true
+        cat pytest_output.txt >> $GITHUB_STEP_SUMMARY
+        grep -q "FAILED" pytest_output.txt && exit 1 || exit 0
     
     - name: Set up Node.js
       uses: actions/setup-node@v4
