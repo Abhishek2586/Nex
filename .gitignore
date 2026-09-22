@@ -16,3 +16,13 @@ src/*.egg-info/
 *.pem
 *.key
 /WESAD/
+
+# Generated test artifacts — never commit
+/temp_pytest/
+/test_fresh/
+
+# Scratch scripts — never commit root-level scratch files
+scratch_*.py
+
+# Log files generated during verification runs
+*.log

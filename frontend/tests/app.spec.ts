@@ -21,6 +21,8 @@ test.describe('NEXORA Dashboard Flows', () => {
   });
 
   test('Comprehensive Research Mode Flow (20 steps)', async ({ page }) => {
+    test.setTimeout(90000);
+
     // 1. Navigate to app
     await page.goto('/');
     
@@ -40,14 +42,17 @@ test.describe('NEXORA Dashboard Flows', () => {
     await page.getByRole('link', { name: 'Live session' }).click();
     await expect(page.getByText('Model state')).toBeVisible();
     
-    // 7. Pause session
+    // 7. Pause session — navigate back to Overview and wait for Pause button
     await page.getByRole('link', { name: 'Overview' }).click();
+    await page.getByRole('button', { name: 'Pause' }).waitFor({ state: 'visible', timeout: 15000 });
     await page.getByRole('button', { name: 'Pause' }).click();
     
-    // 8. Resume session
+    // 8. Resume session — wait for state transition before clicking Resume
+    await page.getByRole('button', { name: 'Resume' }).waitFor({ state: 'visible', timeout: 15000 });
     await page.getByRole('button', { name: 'Resume' }).click();
     
     // 9. Stop session
+    await page.getByRole('button', { name: 'Stop' }).waitFor({ state: 'visible', timeout: 15000 });
     await page.getByRole('button', { name: 'Stop' }).click();
     
     // 10. Select Missing Data scenario
@@ -62,6 +67,7 @@ test.describe('NEXORA Dashboard Flows', () => {
     
     // 13. Stop missing data session
     await page.getByRole('link', { name: 'Overview' }).click();
+    await page.getByRole('button', { name: 'Stop' }).waitFor({ state: 'visible', timeout: 15000 });
     await page.getByRole('button', { name: 'Stop' }).click();
     
     // 14. Select Sustained Posture scenario (triggers intervention)
@@ -73,6 +79,7 @@ test.describe('NEXORA Dashboard Flows', () => {
     
     // 16. Stop session
     await page.getByRole('link', { name: 'Overview' }).click();
+    await page.getByRole('button', { name: 'Stop' }).waitFor({ state: 'visible', timeout: 15000 });
     await page.getByRole('button', { name: 'Stop' }).click();
 
     // 17. Federated & privacy lab

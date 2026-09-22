@@ -7,7 +7,7 @@ from torch import nn
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import balanced_accuracy_score, f1_score, confusion_matrix, classification_report
 from safetensors.torch import save_file, load_file
-from nexora.features.extract import normalize, SCHEMA_HASH, NAMES, LOW, HIGH
+from nexora.features.extract import normalize, SCHEMA_HASH, NAMES
 
 torch.set_num_threads(2)
 

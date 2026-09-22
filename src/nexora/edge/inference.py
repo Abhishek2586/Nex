@@ -16,7 +16,7 @@ def get_predictor():
             if current_hash != _last_active_hash:
                 predictor = Predictor()
                 _last_active_hash = current_hash
-        except: pass
+        except Exception: pass
     return predictor
 
 def set_predictor(p):

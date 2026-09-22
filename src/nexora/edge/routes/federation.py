@@ -28,11 +28,11 @@ def metrics():
     
     if history_path.exists():
         try: results.extend(json.loads(history_path.read_text()))
-        except: pass
+        except Exception: pass
         
     if active_path.exists():
         try: results.append(json.loads(active_path.read_text()))
-        except: pass
+        except Exception: pass
         
     return results
 
@@ -166,20 +166,19 @@ def export_evidence():
     
     if history_path.exists():
         try: evidence["metrics"].extend(json.loads(history_path.read_text()))
-        except: pass
+        except Exception: pass
         
     if active_path.exists():
         try: evidence["metrics"].append(json.loads(active_path.read_text()))
-        except: pass
+        except Exception: pass
         
     for path in (ROOT / 'runtime').glob('client-*/privacy.json'):
         try: evidence["privacy"].append(json.loads(path.read_text()))
-        except: pass
+        except Exception: pass
         
     return JSONResponse(content=evidence, headers={"Content-Disposition": "attachment; filename=evidence.json"})
 
 from fastapi import File, UploadFile, Form, Header
-import tempfile
 import uuid
 import shutil
 from nexora.federation.client_worker import train_client

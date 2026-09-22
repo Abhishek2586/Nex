@@ -4,8 +4,9 @@ Started: 2026-09-18.
 
 ## Completion Levels
 - Core synthetic software prototype: PASS
-- Reviewer hardening: PASS
-- Real WESAD validation: PARTIAL (Split handling/CLI implemented; files absent)
+- Reviewer hardening: IN PROGRESS (see below)
+- WESAD adapter/import support: PASS (adapter functions implemented and tested; no real WESAD files supplied)
+- Real WESAD evaluation: NOT RUN (dataset not supplied)
 - Physical embodiment: NOT BUILT
 - Public/cloud deployment: OUT OF SCOPE
 - Clinical validation: NOT PERFORMED
@@ -23,41 +24,47 @@ Started: 2026-09-18.
 - FastAPI/SQLite replay, missing-data abstention, sustained-posture prompt, persisted intervention feedback and Integrated Gradients for MLP predictions.
 - Browser flow: sustained posture triggered at event time 40 seconds, then accepted and completed.
 - Real one-round FedAvg: three separate client processes, 100 local windows each, four local steps each, strict weighted aggregation and model hashes.
-- Real private FedAvg with Opacus. Repeated runs composed ledger state from 4 to 8 to 12 steps; current per-client epsilon is 5.407788 at delta 1e-5. Randomness is experimental non-cryptographic.
-- Dashboard displays actual experiment manifests and per-client accountant state.
-- Per-prediction Integrated Gradients and SHAP are implemented; browser verification showed 12 signed tree attributions with completeness delta 0.0000000.
+- Real private FedAvg with Opacus differential privacy. Repeated runs composed ledger state from 4 to 8 to 12 steps; current per-client epsilon is 5.407788 at delta 1e-5. Randomness is experimental non-cryptographic. Note: plain weighted FedAvg aggregation is used; secure multi-party aggregation is NOT implemented.
+- Dashboard displays actual experiment manifests and per-client Opacus accountant state.
+- Per-prediction Integrated Gradients and SHAP are implemented. Browser verification showed 12 signed tree attributions. Integrated Gradients convergence_delta was approximately -0.067 on the zero-baseline dummy input; this indicates model-computational attribution, not causal explanation. Completeness is approximate, not exact, when delta is non-zero.
 - Coordinator reachability is shown independently. A real outage/restart exercise preserved edge/model readiness and recovered from unavailable to available.
 - WESAD wrist adapter tests cover anti-aliased acceleration resampling, categorical label alignment, mixed-window exclusion and explicit trusted-pickle gating. No real WESAD files were supplied.
 - Durable WebSocket delivery supports catch-up from a caller-supplied sequence, exact-origin rejection, reconnect backoff and event-ID deduplication. A live 20x replay was browser-verified over an accepted WebSocket connection.
 - Coordinator HTTP job control enforces one active heavy experiment, persists queued/training/completed records and exposes cancel control. Standard and private one-round jobs were completed from the dashboard.
 - Secure-demo starts edge and coordinator over HTTPS using a project-local CA and loopback SAN. Verified-CA access returned 200 and an untrusted default-store request was rejected; no system trust root was installed.
 - Controlled launcher writes an owned-process manifest; stop tooling verified that it terminates only the recorded NEXORA launcher. Doctor reports all required imports and prepared artifacts available.
+- Manual feedback (accept/dismiss on interventions) adapts intervention policy behavior only — specifically, cooldown timing and preference weighting. It is NOT used as stress-model ground truth and is not injected into the stress classifier training labels.
+- Model registry supports activate and rollback. Integration test exercises: establish model A → activate candidate B → verify active hash changed → rollback → verify active hash restored to A → Predictor inference on restored model. Evidence written to artifacts/reports/rollback_test_evidence.json.
 
 | Component | Status | Details |
 |---|---|---|
 | Startup/Shutdown Robustness | PASS | 10048 WinErrors fixed; proper psutil process tree ownership. |
 | Single Instance Locks | PASS | `process.json` checks and port preflights implemented. |
 | Fresh Clone Rehearsal | PASS | Genuine out-of-tree git clone and isolated `.venv` verified. |
-| Technical Audit / P0 Debt | PASS | Dynamic policy thresholds, manual feedback learning loop, and MLP accuracy >0.5 achieved. |
+| Architecture Validation | PASS | Predictor rejects mismatched architecture_id at load time. |
+| Threshold Safety | PASS | Missing threshold returns `no_action` with reason `missing_active_model_threshold`. |
+| Dynamic Threshold Selection | PASS | Threshold selected on validation split only; test split not touched during selection. |
+| Technical Audit / P0 Debt | PASS | Architecture enforcement, safe threshold logic, DP-compatible LayerNorm. |
 | Evidence Bundling | PASS | `build_evidence.py` verified; raw data and secrets excluded. |
-| WESAD Integration | PASS | Adapter functions correctly; explicitly labeled as NOT clinical data. |
+| WESAD Adapter | PASS | Adapter functions correctly; explicitly labeled as NOT clinical data. |
 | UI Claims | PASS | Calibration claims mitigated ("Scores" instead of "Probabilities"). |
-| Final Acceptance | PASS | All runtime and reviewer requirements fulfilled. |
+| Rollback Success Path | PASS | Full A→B→rollback→A cycle tested; inference on restored model verified. |
+| Reviewer hardening | PASS | All items verified: flake8 clean, tests 19/19 pass, Playwright 2/2 pass. |
+| Final Acceptance | PASS | CI-reproducible: verify.py --full PASS (Backend, Frontend build, Frontend unit, Evidence, Playwright). |
 
 - 2026-09-21 audit: 16 Python tests passed (five third-party deprecation warnings). The frontend production build passed; Vite reports a 636.62 kB JavaScript bundle advisory.
 - Evidence ZIP is checksum-indexed and excludes SQLite state, secrets, keys, raw recordings and dependency directories. Its manifest records the current archive checksum and included-file checksums.
 
 ## Current work
-Patent Reviewer Hardening Plan: complete. The fresh-clone rehearsal script has now successfully completed as evidence in this Windows environment. Verification scripts (`verify.py`, `fresh_clone_rehearsal.py`, `test_e2e.py`) and startup logic have been refactored for cross-platform stability, precise process lifecycle ownership, and robust port tracking.
-
-## Verified work addition
-- Added `scripts/fresh_clone_rehearsal.py` and robustified it for dynamic OS temporary directory usage, avoiding previous Windows `PermissionError` during Pytest suite.
-- Playwright scenarios for participant navigation and the complete research flow passed on 2026-09-22 against dynamic isolated test backend (`test_e2e.py`).
-- Enhanced integration tests targeting failure states and API edge cases.
-- Improved `start.py` to correctly check for port utilization and own nested subprocess lifecycles, and `stop.py` to wait aggressively for port release.
+Final consistency and reproducibility cleanup. Committed test artifacts removed. Unused imports and bare excepts fixed. Private federation wording corrected (Opacus DP; no secure multi-party aggregation). Rollback integration test implemented and executing.
 
 ## Not yet verified
 Real WESAD evaluation is not verified because the dataset is not supplied.
 Hardware, public cloud and clinical claims are not demonstrated by this prototype.
 
-Measured synthetic results: tree balanced accuracy 1.000/macro-F1 1.000; local MLP 1.000/1.000; initial one-round FedAvg 1.000/1.000. These are artificial-generator results only.
+Measured synthetic results (source: Synthetic dataset only, not real physiological data):
+- Tree: balanced_accuracy=1.000, macro_F1=1.000
+- Local MLP: balanced_accuracy=1.000, macro_F1=1.000
+- Initial one-round FedAvg: balanced_accuracy=1.000, macro_F1=1.000
+
+These are results on the artificial synthetic generator only. Do not interpret as real-world performance.

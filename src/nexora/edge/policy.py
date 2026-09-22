@@ -35,7 +35,7 @@ def evaluate_policy(s, i, posture, current_time_s):
     # We evaluate this if posture didn't trigger
     if not posture_triggered and 'latest_prediction' in s and s['latest_prediction']:
         pred = s['latest_prediction']
-        if pred.get('abstained') == False and pred.get('probabilities'):
+        if pred.get('abstained') is not True and pred.get('probabilities'):
             import os
             from pathlib import Path
             registry_path = Path(os.environ.get('NEXORA_ROOT', Path(__file__).resolve().parents[3])) / 'models' / 'registry' / 'active.json'
@@ -51,7 +51,9 @@ def evaluate_policy(s, i, posture, current_time_s):
             if threshold is None:
                 import logging
                 logging.warning("No threshold found in active model metadata. Safely abstaining from model interventions.")
-                threshold = 1.1 # Impossible to trigger
+                decision.update(result='no_action', reason_codes=['missing_active_model_threshold'])
+                event(s, 'decision', decision)
+                return decision
 
             if pred['probabilities'][1] > threshold:
                 if s.get('model_evidence_since') is None:

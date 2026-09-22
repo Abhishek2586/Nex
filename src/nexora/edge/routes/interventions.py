@@ -1,5 +1,4 @@
 import json
-import uuid
 from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
 from nexora.edge.schemas import FeedbackRequest
