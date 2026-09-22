@@ -106,8 +106,10 @@ def main():
             ("Install Backend Deps", [clone_python, "-m", "pip", "install", "-e", ".[dev]"], clone_dir),
             ("Install Frontend Deps", [npm, "install"], clone_dir/"frontend"),
             ("Bootstrap", [clone_python, "scripts/bootstrap.py"], clone_dir),
+            ("Start Backend", [clone_python, "scripts/start.py"], clone_dir),
             ("Prepare Demo", [clone_python, "scripts/prepare_demo.py"], clone_dir),
             ("Doctor", [clone_python, "scripts/doctor.py"], clone_dir),
+            ("Stop Backend", [clone_python, "scripts/stop.py"], clone_dir),
             ("Pytest", [clone_python, "-m", "pytest", "-q", "-p", "no:cacheprovider", f"--basetemp={basetemp}", "tests/"], clone_dir),
             ("Frontend Build", [npm, "run", "build"], clone_dir/"frontend"),
             ("Frontend Unit Tests", [npm, "run", "test"], clone_dir/"frontend"),
@@ -153,9 +155,11 @@ def main():
         print(f"Rehearsal aborted: {e}")
         report["error"] = str(e)
     finally:
-        # Step 10 & 11: handled inside test_e2e.py execution, but if we aborted early, 
-        # we should ensure no processes are orphaned. 
-        # We assume test_e2e handles its own cleanup.
+        # Step 10 & 11: Cleanup backend and processes
+        if 'clone_dir' in locals() and clone_dir.exists():
+            print("Ensuring backend processes are stopped...")
+            subprocess.run([clone_python, "scripts/stop.py"], cwd=clone_dir)
+            
         report["end_time"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
         
         # Step 13: Write report to original repo
