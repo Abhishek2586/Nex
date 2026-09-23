@@ -37,10 +37,10 @@ test.describe('NEXORA Dashboard Flows', () => {
     await page.getByRole('button', { name: 'Start synthetic session' }).click();
 
     // Verify session running
-    await expect(page.getByText('Session Summary')).toBeVisible();
+    await expect(page.locator('.status')).toHaveText('Status: running', { timeout: 15000 });
     await page.getByRole('link', { name: 'Live session' }).click();
     await expect(page).toHaveURL(/.*Live%20session/);
-    await expect(page.getByText('Model state')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Model state' })).toBeVisible();
     
     // Stop session
     await page.getByRole('link', { name: 'Overview' }).click();
@@ -59,6 +59,7 @@ test.describe('NEXORA Dashboard Flows', () => {
     
     await page.getByRole('combobox', { name: 'Scenario' }).selectOption('missing_data');
     await page.getByRole('button', { name: 'Start synthetic session' }).click();
+    await expect(page.locator('.status')).toHaveText('Status: running', { timeout: 15000 });
     
     // Verify missing data abstention
     await page.getByRole('link', { name: 'Live session' }).click();
@@ -76,6 +77,7 @@ test.describe('NEXORA Dashboard Flows', () => {
     await page.goto('/Overview');
     await page.getByRole('combobox', { name: 'Scenario' }).selectOption('high_motion');
     await page.getByRole('button', { name: 'Start synthetic session' }).click();
+    await expect(page.locator('.status')).toHaveText('Status: running', { timeout: 15000 });
     
     await page.getByRole('link', { name: 'Live session' }).click();
     await expect(page).toHaveURL(/.*Live%20session/);
@@ -93,6 +95,7 @@ test.describe('NEXORA Dashboard Flows', () => {
     // Sustained posture triggers intervention
     await page.getByRole('combobox', { name: 'Scenario' }).selectOption('sustained_posture');
     await page.getByRole('button', { name: 'Start synthetic session' }).click();
+    await expect(page.locator('.status')).toHaveText('Status: running', { timeout: 15000 });
     
     await page.getByRole('link', { name: 'Interventions' }).click();
     await expect(page.getByText('Prompts & feedback')).toBeVisible();
@@ -112,6 +115,7 @@ test.describe('NEXORA Dashboard Flows', () => {
     
     await page.getByRole('combobox', { name: 'Scenario' }).selectOption('normal');
     await page.getByRole('button', { name: 'Start synthetic session' }).click();
+    await expect(page.locator('.status')).toHaveText('Status: running', { timeout: 15000 });
     
     // Check user guidance page
     await page.getByText('Research Mode').click(); // switch to user
@@ -127,6 +131,7 @@ test.describe('NEXORA Dashboard Flows', () => {
     await page.goto('/Overview');
     await page.getByRole('combobox', { name: 'Scenario' }).selectOption('normal');
     await page.getByRole('button', { name: 'Start synthetic session' }).click();
+    await expect(page.locator('.status')).toHaveText('Status: running', { timeout: 15000 });
     
     await page.getByRole('link', { name: 'AI insights' }).click();
     const explainBtn = page.getByRole('button', { name: 'Explain latest prediction' });
