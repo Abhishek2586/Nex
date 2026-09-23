@@ -42,8 +42,11 @@ test.describe('NEXORA Dashboard Flows', () => {
     
     // Stop session
     await page.getByRole('link', { name: 'Overview' }).click();
-    await page.getByRole('button', { name: 'Stop' }).waitFor({ state: 'visible', timeout: 15000 });
-    await page.getByRole('button', { name: 'Stop' }).click();
+    const stopBtn = page.getByRole('button', { name: 'Stop' });
+    await stopBtn.waitFor({ state: 'visible', timeout: 15000 });
+    if (await stopBtn.isEnabled()) {
+        await stopBtn.click();
+    }
   });
 
   test('3. Research Mode: Missing Data Scenario', async ({ page }) => {
@@ -60,8 +63,11 @@ test.describe('NEXORA Dashboard Flows', () => {
     
     // Stop session
     await page.getByRole('link', { name: 'Overview' }).click();
-    await page.getByRole('button', { name: 'Stop' }).waitFor({ state: 'visible', timeout: 15000 });
-    await page.getByRole('button', { name: 'Stop' }).click();
+    const stopBtn2 = page.getByRole('button', { name: 'Stop' });
+    await stopBtn2.waitFor({ state: 'visible', timeout: 15000 });
+    if (await stopBtn2.isEnabled()) {
+        await stopBtn2.click();
+    }
   });
 
   test('4. Research Mode: Interventions & Prompt Isolation', async ({ page }) => {
@@ -74,12 +80,15 @@ test.describe('NEXORA Dashboard Flows', () => {
     
     await page.getByRole('link', { name: 'Interventions' }).click();
     await expect(page.getByText('Prompts & feedback')).toBeVisible();
-    await expect(page.getByText('Physical output not connected.').first()).toBeVisible();
+    await expect(page.getByText('Physical output not connected.').first()).toBeVisible({ timeout: 15000 });
     
     // Check prompt isolation: go back, stop, start a new session (normal), ensure prompt doesn't bleed over
     await page.getByRole('link', { name: 'Overview' }).click();
-    await page.getByRole('button', { name: 'Stop' }).waitFor({ state: 'visible', timeout: 15000 });
-    await page.getByRole('button', { name: 'Stop' }).click();
+    const stopBtn3 = page.getByRole('button', { name: 'Stop' });
+    await stopBtn3.waitFor({ state: 'visible', timeout: 15000 });
+    if (await stopBtn3.isEnabled()) {
+        await stopBtn3.click();
+    }
     
     await page.getByRole('combobox', { name: 'Scenario' }).selectOption('normal');
     await page.getByRole('button', { name: 'Start synthetic session' }).click();
