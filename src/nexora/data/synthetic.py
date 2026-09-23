@@ -37,7 +37,17 @@ def prepare(root=Path("data/synthetic"), seed=42):
     root.mkdir(parents=True, exist_ok=True)
     subjects = np.random.default_rng(seed).permutation(24).tolist()
     splits = {"train": subjects[:15], "validation": subjects[15:18], "test": subjects[18:]}
-    manifest = {"source": "Synthetic", "seed": seed, "sample_hz": 4, "duration_s": 600, "splits": splits, "clients": {f"client-{c}": subjects[i*5:(i+1)*5] for i, c in enumerate("abc")}, "feature_schema_hash": SCHEMA_HASH}
+    manifest = {
+        "source": "Synthetic",
+        "dataset_version": "synthetic-v1",
+        "seed": seed,
+        "sample_hz": 4,
+        "duration_s": 600,
+        "subject_count": len(subjects),
+        "splits": splits,
+        "clients": {f"client-{c}": subjects[i*5:(i+1)*5] for i, c in enumerate("abc")},
+        "feature_schema_hash": SCHEMA_HASH
+    }
     features, targets, ids = [], [], []
     for subject in range(24):
         samples, labels, posture = generate_subject(subject, seed)

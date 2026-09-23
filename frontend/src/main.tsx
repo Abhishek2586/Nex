@@ -36,7 +36,7 @@ function App(){
  const start=()=>act(async()=>{const s=await api('sessions',{scenario,speed,seed:42});SEL(s.id);await api(`sessions/${s.id}/start`,{})});
  
  const session=sessions.find(s=>s.id===selected);
- const obs=events.filter(e=>e.event_type==='observation').map(e=>({...e.payload,...e.payload.signals}));
+ const obs=events.filter(e=>e.event_type==='observation').map(e=>{const o={...e.payload,...e.payload.signals}; o.acc_mag_g=(o.acc_x_g!=null&&o.acc_y_g!=null&&o.acc_z_g!=null)?Math.sqrt(o.acc_x_g**2+o.acc_y_g**2+o.acc_z_g**2):null; return o;});
  const latest=obs.at(-1);
  const pred=events.filter(e=>e.event_type==='prediction').at(-1)?.payload;
  const activePrompts=prompts.filter(p=>(p.status==='offered'||p.status==='accepted')&&(p.session_id===selected));
@@ -75,10 +75,10 @@ function App(){
  </div>
  <div className="twocol">
    {renderChart('Skin Temperature', 'skin_temperature_c', '°C', '#c0392b')}
-   {renderChart('Motion Quality', 'motion_quality', '', '#8e44ad')}
+   {renderChart('Acceleration magnitude', 'acc_mag_g', 'g', '#8e44ad')}
  </div>
  <div className="twocol"><div className="card"><h2>Model state</h2><p>{!pred?'Waiting for a complete 30-second window':pred.abstained?'Abstained: '+pred.reason:`Stress model score: ${(pred.probabilities[1]*100).toFixed(1)}%`}</p><p className="muted">Scores are uncalibrated model outputs. No diagnosis.</p><p>Active Hash: {activeModel?.model_hash?.slice(0,8) || 'unknown'}</p><p>Threshold: {activeModel?.threshold != null ? activeModel.threshold : <em>Unavailable</em>}</p>
- {activeModel?.reload_state === 'mismatch' && <div className="alert-box" style={{background:'#f8d7da', color:'#721c24', padding:'0.5rem', marginTop:'0.5rem'}}>Warning: Reload State Mismatch (Loaded vs Registry)</div>}
+ {activeModel?.model_hash && (activeModel?.loaded_model_hash !== activeModel?.model_hash || !['loaded', 'ok', 'ready'].includes(activeModel?.reload_state)) && <div className="alert-box" style={{background:'#f8d7da', color:'#721c24', padding:'0.5rem', marginTop:'0.5rem'}}>Warning: Reload Issue. Status: {activeModel.reload_state || 'unknown'}. {activeModel.reload_error && `Error: ${activeModel.reload_error}`}. {activeModel.loaded_model_hash !== activeModel.model_hash ? `Hash mismatch (loaded: ${activeModel.loaded_model_hash?.slice(0,8) || 'none'} vs registry: ${activeModel.model_hash?.slice(0,8)})` : ''}</div>}
  <span className="badge">{session?.status||'No active session'} · {session?.speed||speed}×</span></div><div className="card"><h2>Recent decisions</h2>{events.filter(e=>e.event_type==='decision').slice(-4).reverse().map(e=><div className="row" key={e.event_id}><b>{e.payload.result}</b><span>{e.payload.reason_codes.join(', ')}</span></div>)}</div></div></>}
  
  {page==='Home'&&mode==='user'&&<><div className="participant-hero"><span className="eyebrow">Synthetic demonstration data</span><h2>{session?.status==='running'?'Monitoring simulation is active':session?.status==='paused'?'Monitoring simulation is paused':'Ready to start a monitoring simulation'}</h2><p>{pred?.abstained?'Signal quality is insufficient.':activePrompts.length?'NEXORA has a small suggestion.':'This demonstration watches simulated signals and offers guidance.'}</p><span className="badge">Runs locally on this laptop</span></div><div className="stats participant-signals">{[['Signal 1',latest?.eda_us,'available'],['Signal 2',latest?.skin_temperature_c,'available'],['Signal 3',latest?.posture_angle_deg,'available']].map(([name,value,state])=><div className="card" key={String(name)}><small>{name}</small><strong>{value==null?'Unavailable':'Active'}</strong><span>{state==='available'?'Synthetic source':'Not supplied by this demo'}</span></div>)}</div><div className="card controls"><button onClick={start}>Start Session</button><button className="secondary" disabled={!session||session.status==='stopped'} onClick={()=>act(()=>api(`sessions/${selected}/${session?.status==='running'?'pause':'start'}`,{}))}>{session?.status==='running'?'Pause':'Resume'}</button><button className="secondary" disabled={!session||session.status==='stopped'} onClick={()=>act(()=>api(`sessions/${selected}/stop`,{}))}>End session</button></div></>}

@@ -6,7 +6,6 @@ import shutil
 from pathlib import Path
 import pytest
 
-from nexora.ml.train import ARCHITECTURE_ID
 from nexora.features.extract import SCHEMA_HASH
 
 
@@ -33,8 +32,7 @@ def test_architecture_id_mismatch_rejected():
         (model_dir / 'metadata.json').write_text(json.dumps(meta))
 
         # Patch Predictor to look in our temp dir
-        import nexora.ml.train as train_mod
-        original_path_cls = train_mod.Path
+#         original_path_cls = train_mod.Path
 
         class _PatchedPath(type(Path())):
             pass

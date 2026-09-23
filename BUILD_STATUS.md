@@ -34,7 +34,7 @@ Started: 2026-09-18.
 - Secure-demo starts edge and coordinator over HTTPS using a project-local CA and loopback SAN. Verified-CA access returned 200 and an untrusted default-store request was rejected; no system trust root was installed.
 - Controlled launcher writes an owned-process manifest; stop tooling verified that it terminates only the recorded NEXORA launcher. Doctor reports all required imports and prepared artifacts available.
 - Manual feedback (accept/dismiss on interventions) adapts per-intervention cooldown timing only. It is NOT used as physiological stress ground truth and is not injected into the stress classifier training labels.
-- Model registry supports activate and rollback. Integration test exercises: establish model A → activate candidate B → verify active hash changed → rollback → verify active hash restored to A → Predictor inference on restored model. Evidence written to artifacts/reports/rollback_test_evidence.json.
+- Model registry supports activate and rollback. Integration test exercises: establish model A → activate candidate B → verify active hash changed & lifecycle states → rollback → verify active hash restored to A & B is retired → Predictor inference on restored model. Evidence written to artifacts/reports/rollback_test_evidence.json.
 
 | Component | Status | Details |
 |---|---|---|
@@ -53,9 +53,9 @@ Started: 2026-09-18.
 | Federation Update Hash | PASS | Coordinator verifies update_hash matches actual received bytes; client_id binding verified. |
 | Model Lifecycle States | PASS | candidate → active; previous active → retired on activation. |
 | Predictor Reload Tracking | PASS | Silent failures eliminated; loaded_model_hash, reload_status, reload_error exposed. |
-| Reviewer hardening | PASS | CI green confirmed on latest commit. |
-| CI Green | PASS | Latest CI run confirmed successfully. |
-| Final Acceptance | PASS | Verified after full local verify --full and green CI. |
+| Reviewer hardening | IN PROGRESS | Addressing 40-point hardening checklist. |
+| CI Green | FAIL | FAIL on current HEAD; awaiting fix. |
+| Final Acceptance | PARTIAL | Will verify upon CI success. |
 
 - 2026-09-22 audit: 20 Python tests pass locally. Tests are clean-clone safe — they skip gracefully where generated artifacts (trained models) are absent. Two third-party deprecation warnings remain (httpx starlette) which are not Nexora code.
 - Evidence ZIP uses a canonical builder with allowlist-based inclusion and rich manifest (git_commit, active_model_hash, architecture_id, feature_schema_hash, per-file sha256).

@@ -3,16 +3,13 @@ import hashlib
 import json
 import tempfile
 from pathlib import Path
-from unittest import mock
 
-import pytest
 from fastapi.testclient import TestClient
-import torch
 
 from nexora.federation.coordinator import app as coord_app
 from nexora.edge.routes.federation import router as edge_router
 from fastapi import FastAPI
-from nexora.ml.train import network, ARCHITECTURE_ID
+from nexora.ml.train import ARCHITECTURE_ID
 from nexora.features.extract import SCHEMA_HASH
 
 ROOT = Path(__file__).resolve().parents[2]

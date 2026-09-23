@@ -85,7 +85,12 @@ def run(rounds=5, private=False, dataset="synthetic"):
 
         base_state = _numpy_state(base)
         updates = []
+        seen_clients = set()
         for expected_c_id, meta, path in zip(client_urls.keys(), client_meta, outputs):
+            cid = meta.get("client_id")
+            if cid in seen_clients:
+                raise RuntimeError("Duplicate client ID detected")
+            seen_clients.add(cid)
             # Validate response protocol metadata
             if meta.get("protocol_version") != "nexora-fed-v1": raise RuntimeError("Client update protocol_version mismatch")
             if meta.get("run_id") != run_id: raise RuntimeError("Client update run_id mismatch")
@@ -95,6 +100,10 @@ def run(rounds=5, private=False, dataset="synthetic"):
             if meta.get("architecture_id") != ARCHITECTURE_ID: raise RuntimeError("Client update architecture_id mismatch")
             if meta.get("records", 0) <= 0: raise RuntimeError("Client update has no records")
             
+            # Validation: check hashes and duplicates
+            if meta.get("update_hash") != hashlib.sha256(path.read_bytes()).hexdigest():
+                raise RuntimeError("Update hash mismatch")
+                
             state = _numpy_state(path)
             # Validation: check shapes and hashes
             if state.keys() != base_state.keys():

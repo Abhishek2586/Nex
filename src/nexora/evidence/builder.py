@@ -47,8 +47,8 @@ ALLOWLISTED_STATIC = [
     "artifacts/reports/fresh-clone.json",
     "artifacts/reports/e2e-run.json",
     "artifacts/reports/multi-seed.json",
+    "artifacts/reports/performance.json",
     "reports/pytest.xml",
-    "artifacts/reports/multi-seed.json",
     "artifacts/demo/DEMO_SCRIPT.md",
     "data/synthetic/manifest.json",
     "models/synthetic/baseline/metadata.json",
@@ -145,18 +145,25 @@ def build_evidence_package(root: Path, output_path: Path) -> dict[str, Any]:
         pass
         
     dataset_hash = None
+    dataset_seed = 42
+    dataset_source = "Synthetic"
     try:
         ds_manifest = json.loads((root / "data/synthetic/manifest.json").read_text())
         dataset_hash = ds_manifest.get("windows_sha256")
+        dataset_seed = ds_manifest.get("seed", 42)
+        dataset_source = ds_manifest.get("source", "Synthetic")
     except Exception: pass
     
     reload_state = "unknown"
-    loaded_model_hash = None
+    reload_error = None
+    loaded_model_hash: str | None = None
     try:
         from nexora.edge.inference import get_reload_state
         state = get_reload_state()
-        reload_state = state.get("reload_status")
-        loaded_model_hash = state.get("loaded_model_hash")
+        reload_state = str(state.get("reload_status") or "unknown")
+        reload_error = state.get("reload_error")
+        loaded_hash = state.get("loaded_model_hash")
+        loaded_model_hash = str(loaded_hash) if loaded_hash else None
     except Exception: pass
 
     git_commit = _get_git_commit(root)
@@ -183,11 +190,12 @@ def build_evidence_package(root: Path, output_path: Path) -> dict[str, Any]:
         "npm_version": npm_version,
         "protocol_version": "nexora-fed-v1",
         "dataset_hash": dataset_hash,
-        "dataset_seed": 42,
-        "dataset_source": "Synthetic",
+        "dataset_seed": dataset_seed,
+        "dataset_source": dataset_source,
         "registry_model_hash": active_hash,
         "loaded_model_hash": loaded_model_hash,
         "reload_state": reload_state,
+        "reload_error": reload_error,
         "active_model_hash": active_hash,
         "architecture_id": architecture_id,
         "feature_schema_hash": feature_schema_hash,

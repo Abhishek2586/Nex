@@ -6,10 +6,8 @@ import json
 import os
 import shutil
 import tempfile
-import time
 from pathlib import Path
 
-import pytest
 import torch
 from safetensors.torch import save_file
 

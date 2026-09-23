@@ -86,7 +86,7 @@ def main():
             npm_v = subprocess.check_output([npm, "-v"]).decode('utf-8').strip()
             report["node_version"] = node_v
             report["npm_version"] = npm_v
-        except:
+        except Exception:
             pass
 
         # Step 7: Create venv
@@ -146,7 +146,7 @@ def main():
                 report["playwright_flaky"] = e2e_data.get("flaky", 0)
                 report["playwright_skipped"] = e2e_data.get("skipped", 0)
                 report["cleanup_result"] = e2e_data.get("cleanup_result")
-            except:
+            except Exception:
                 pass
                 
         # Determine success

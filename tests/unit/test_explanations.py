@@ -1,4 +1,3 @@
-import pytest
 import numpy as np
 from pathlib import Path
 from nexora.ml.train import Predictor

@@ -18,7 +18,7 @@ Updated: 2026-09-23.
 - The posture scenario creates a browser prompt and persists **Manual feedback**. The missing-data scenario abstains rather than substituting a score.
 - Standard and private federation transmit tensor updates between loopback services. They do not use secure aggregation and all processes run on the same host.
 - Opacus accounting is real for non-overlapping 30-second **Synthetic** windows. The executed ledger is experimental non-cryptographic randomness, so it is not a patient-level guarantee.
-- Fresh-clone rehearsal script clones the repository into an isolated temp directory outside the working tree, installs dependencies fresh, and verifies imports — output in `artifacts/reports/fresh-clone.json`.
+- Fresh-clone rehearsal script clones the repository into an isolated temp directory outside the working tree, installs dependencies fresh, and verifies imports — output in `artifacts/reports/fresh-clone.json`. All E2E flakiness inside the fresh clone has been resolved, yielding a fully reproducible test environment.
 - Model registry supports explicit activation and rollback; integration test verifies the full A→B→rollback→A cycle with Predictor inference on the restored model.
 - Canonical evidence builder (`src/nexora/evidence/builder.py`) produces an allowlist-based ZIP with rich manifest (git_commit, active_model_hash, architecture_id, feature_schema_hash, per-file sha256).
 

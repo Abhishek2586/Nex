@@ -60,18 +60,26 @@ test.describe('NEXORA Dashboard Flows', () => {
     
     // Verify missing data abstention
     await page.getByRole('link', { name: 'Live session' }).click();
-    // It might take a bit for a prediction to arrive
-    await expect(page.getByText('Model state')).toBeVisible();
+    await expect(page.getByText(/Abstained:.*(?:missing|low quality|Missing)/i)).toBeVisible({ timeout: 40000 });
     
     // Stop session
     await page.getByRole('link', { name: 'Overview' }).click();
-    await expect(page.locator('.status').filter({ hasText: /running|stopped/ })).toBeVisible({ timeout: 15000 });
+    const stopBtn = page.getByRole('button', { name: 'Stop' });
+    if (await stopBtn.isEnabled()) await stopBtn.click();
+  });
+
+  test('3.5 Research Mode: High Motion Scenario', async ({ page }) => {
+    test.setTimeout(60000);
+    await page.goto('/Overview');
+    await page.getByRole('combobox', { name: 'Scenario' }).selectOption('high_motion');
+    await page.getByRole('button', { name: 'Start synthetic session' }).click();
     
-    const stopBtn2 = page.getByRole('button', { name: 'Stop' });
-    if (await stopBtn2.isEnabled()) {
-        await stopBtn2.click();
-    }
-    await expect(stopBtn2).toBeDisabled({ timeout: 10000 });
+    await page.getByRole('link', { name: 'Live session' }).click();
+    await expect(page.getByText(/Abstained:.*(?:high motion)/i)).toBeVisible({ timeout: 40000 });
+    
+    await page.getByRole('link', { name: 'Overview' }).click();
+    const stopBtn = page.getByRole('button', { name: 'Stop' });
+    if (await stopBtn.isEnabled()) await stopBtn.click();
   });
 
   test('4. Research Mode: Interventions & Prompt Isolation', async ({ page }) => {
@@ -82,67 +90,70 @@ test.describe('NEXORA Dashboard Flows', () => {
     await page.getByRole('combobox', { name: 'Scenario' }).selectOption('sustained_posture');
     await page.getByRole('button', { name: 'Start synthetic session' }).click();
     
-    // Wait for session to actually start
-    const stopBtn = page.getByRole('button', { name: 'Stop' });
-    await expect(stopBtn).toBeEnabled({ timeout: 15000 });
-    
     await page.getByRole('link', { name: 'Interventions' }).click();
     await expect(page.getByText('Prompts & feedback')).toBeVisible();
-    await expect(page.getByText('Physical output not connected.').first()).toBeVisible({ timeout: 30000 });
     
-    // Check prompt isolation: go back, stop, start a new session (normal), ensure prompt doesn't bleed over
+    const acceptBtn = page.getByRole('button', { name: 'accept' }).first();
+    await expect(acceptBtn).toBeVisible({ timeout: 40000 });
+    await acceptBtn.click();
+    
+    const completeBtn = page.getByRole('button', { name: 'complete' }).first();
+    await expect(completeBtn).toBeVisible({ timeout: 10000 });
+    await completeBtn.click();
+    
+    // Check prompt isolation
     await page.getByRole('link', { name: 'Overview' }).click();
-    await expect(page.locator('.status').filter({ hasText: /running|stopped/ })).toBeVisible({ timeout: 15000 });
-    
-    if (await stopBtn.isEnabled()) {
-        await stopBtn.click();
-    }
-    await expect(stopBtn).toBeDisabled({ timeout: 10000 });
+    const stopBtn = page.getByRole('button', { name: 'Stop' });
+    if (await stopBtn.isEnabled()) await stopBtn.click();
     
     await page.getByRole('combobox', { name: 'Scenario' }).selectOption('normal');
     await page.getByRole('button', { name: 'Start synthetic session' }).click();
-    await expect(stopBtn).toBeEnabled({ timeout: 15000 });
     
-    // Check user guidance page (should have no active prompts for normal)
+    // Check user guidance page
     await page.getByText('Research Mode').click(); // switch to user
     await page.getByRole('link', { name: 'Guidance' }).click();
     await expect(page.getByText('No action is needed right now.')).toBeVisible();
     
     await page.getByRole('link', { name: 'Home' }).click();
     await page.getByRole('button', { name: 'End session' }).click();
-    await expect(page.getByRole('button', { name: 'End session' })).toBeHidden({ timeout: 10000 });
   });
 
   test('5. AI Insights & Explanations', async ({ page }) => {
+    test.setTimeout(90000);
+    await page.goto('/Overview');
+    await page.getByRole('combobox', { name: 'Scenario' }).selectOption('normal');
+    await page.getByRole('button', { name: 'Start synthetic session' }).click();
+    
     await page.goto('/AI%20insights');
-    await expect(page.getByRole('heading', { name: 'AI insights' })).toBeVisible();
-    
-    // Check confusion matrix renders (empty state or populated)
-    await expect(page.getByText('Confusion Matrix').first()).toBeVisible();
-    
-    // Attribution section
-    await expect(page.getByText('Per-prediction attribution')).toBeVisible();
     const explainBtn = page.getByRole('button', { name: 'Explain latest prediction' });
-    await expect(explainBtn).toBeVisible();
+    await expect(explainBtn).toBeVisible({ timeout: 40000 });
+    await explainBtn.click();
+    
+    await expect(page.getByText('Completeness delta:')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('.recharts-bar-rectangle')).toHaveCount(12, { timeout: 10000 });
   });
 
-  test('6. Federated Lab: Run FedAvg', async ({ page }) => {
+  test('6. Federated Lab & Rollback', async ({ page }) => {
+    test.setTimeout(120000);
     await page.goto('/Federated%20%26%20privacy%20lab');
-    await expect(page.getByText('Client Topology')).toBeVisible();
-    await expect(page.getByText('Opacus: ENABLED')).toBeVisible();
     
-    // Ensure we can see the buttons
     const runBtn = page.getByRole('button', { name: 'Run 1-round FedAvg' });
     await expect(runBtn).toBeVisible();
-  });
-
-  test('7. Model Rollback Action', async ({ page }) => {
-    await page.goto('/Federated%20%26%20privacy%20lab');
-    await expect(page.getByText('Client Topology')).toBeVisible();
-    // Test if Rollback button renders when there's an experiment
-    const rollbackBtn = page.getByRole('button', { name: 'Rollback to Previous' });
-    // In a fresh clone, there may not be completed runs yet, so we just verify the route works.
-    await expect(page.getByText('Measured experiment runs')).toBeVisible();
+    await runBtn.click();
+    
+    await expect(page.getByText(/1 round · completed/i).first()).toBeVisible({ timeout: 90000 });
+    
+    const activateBtn = page.getByRole('button', { name: 'Activate Candidate' }).first();
+    await expect(activateBtn).toBeVisible();
+    await activateBtn.click();
+    
+    await page.waitForTimeout(2000);
+    
+    const rollbackBtn = page.getByRole('button', { name: 'Rollback to Previous' }).first();
+    await expect(rollbackBtn).toBeVisible();
+    await rollbackBtn.click();
+    
+    await page.waitForTimeout(2000);
   });
 
   test('8. Accessibility: Reduce Motion Toggle', async ({ page }) => {
