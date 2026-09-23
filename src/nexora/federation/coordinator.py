@@ -1,6 +1,6 @@
-"""Loopback coordinator status and persisted public experiment metadata."""
 import json
 from pathlib import Path
+import os
 import subprocess
 import sys
 import threading
@@ -71,7 +71,14 @@ def _execute(job):
 @app.get("/health")
 def health():
     manifests = list((ROOT / "artifacts" / "runs").glob("*/manifest.json"))
-    return {"status": "available", "role": "coordinator", "completed_runs": len(manifests), "transport": "Local HTTP"}
+    client_urls = {
+        "client-a": os.environ.get("NEXORA_CLIENT_A_URL", "http://127.0.0.1:8080"),
+        "client-b": os.environ.get("NEXORA_CLIENT_B_URL", "http://127.0.0.1:8082"),
+        "client-c": os.environ.get("NEXORA_CLIENT_C_URL", "http://127.0.0.1:8083")
+    }
+    if os.environ.get('NEXORA_CA_FILE'):
+        client_urls = {k: v.replace('http:', 'https:') for k, v in client_urls.items()}
+    return {"status": "available", "role": "coordinator", "completed_runs": len(manifests), "transport": "Local HTTP", "client_urls": client_urls}
 
 @app.get("/api/v1/experiments", dependencies=[Depends(verify_token)])
 def experiments():
@@ -89,7 +96,7 @@ def jobs():
 def create_experiment(body:ExperimentRequest):
     if body.mode not in ['federated','private-federated']: raise HTTPException(422,'Unsupported mode')
     if any(item['status'] in ['queued','training'] for item in jobs()): raise HTTPException(409,'Another experiment is active')
-    job={'job_id':str(uuid.uuid4()),'mode':body.mode,'rounds':body.rounds,'source':'Synthetic','status':'queued','created_at':time.time()}
+    job={'job_id':str(uuid.uuid4()),'mode':body.mode,'rounds':body.rounds,'dataset':body.dataset,'source':'Synthetic','status':'queued','created_at':time.time()}
     _save(job); threading.Thread(target=_execute,args=(job,),daemon=True).start(); return job
 
 @app.get('/api/v1/experiments/{job_id}', dependencies=[Depends(verify_token)])

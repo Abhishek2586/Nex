@@ -24,6 +24,7 @@ test.describe('NEXORA Dashboard Flows', () => {
 
   test('2. Research Mode: Normal Scenario', async ({ page }) => {
     test.setTimeout(60000);
+    page.on('pageerror', err => console.log('Page Error:', err));
     await page.goto('/'); // Default is Research Mode if local storage is clear, but let's be sure
     // Ensure Research Mode (if not already)
     const toggle = page.getByLabel('Research Mode');
@@ -38,6 +39,7 @@ test.describe('NEXORA Dashboard Flows', () => {
     // Verify session running
     await expect(page.getByText('Session Summary')).toBeVisible();
     await page.getByRole('link', { name: 'Live session' }).click();
+    await expect(page).toHaveURL(/.*Live%20session/);
     await expect(page.getByText('Model state')).toBeVisible();
     
     // Stop session
@@ -60,7 +62,8 @@ test.describe('NEXORA Dashboard Flows', () => {
     
     // Verify missing data abstention
     await page.getByRole('link', { name: 'Live session' }).click();
-    await expect(page.getByText(/Abstained:.*(?:insufficient_coverage|unrepairable_gap|missing|low quality)/i)).toBeVisible({ timeout: 40000 });
+    await expect(page).toHaveURL(/.*Live%20session/);
+    await expect(page.locator('[data-testid="recent-predictions"]')).toContainText(/Abstained.*(insufficient_coverage|unrepairable_gap|missing|low quality)/i, { timeout: 40000 });
     
     // Stop session
     await page.getByRole('link', { name: 'Overview' }).click();
@@ -75,7 +78,8 @@ test.describe('NEXORA Dashboard Flows', () => {
     await page.getByRole('button', { name: 'Start synthetic session' }).click();
     
     await page.getByRole('link', { name: 'Live session' }).click();
-    await expect(page.getByText(/Abstained:.*(?:high motion)/i)).toBeVisible({ timeout: 40000 });
+    await expect(page).toHaveURL(/.*Live%20session/);
+    await expect(page.locator('[data-testid="recent-predictions"]')).toContainText(/Abstained.*(?:high motion)/i, { timeout: 40000 });
     
     await page.getByRole('link', { name: 'Overview' }).click();
     const stopBtn = page.getByRole('button', { name: 'Stop' });
@@ -135,25 +139,39 @@ test.describe('NEXORA Dashboard Flows', () => {
 
   test('6. Federated Lab & Rollback', async ({ page }) => {
     test.setTimeout(120000);
+    
+    // Check initial hash
+    await page.goto('/Settings');
+    const oldHashText = await page.getByText(/Active model hash:\s*([a-f0-9]+|None)/).innerText();
+    const oldHash = oldHashText.match(/Active model hash:\s*([a-f0-9]+|None)/)?.[1] || '';
+
     await page.goto('/Federated%20%26%20privacy%20lab');
+    await expect(page.getByText('Coordinator available').first()).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('client-a').first()).toBeVisible();
+    await expect(page.getByText('client-b').first()).toBeVisible();
+    await expect(page.getByText('client-c').first()).toBeVisible();
     
     const runBtn = page.getByRole('button', { name: 'Run 1-round FedAvg' });
-    await expect(runBtn).toBeVisible();
+    await expect(runBtn).toBeEnabled({ timeout: 10000 });
     await runBtn.click();
     
+    await expect(page.getByText(/1 round · (queued|training)/i).first()).toBeVisible({ timeout: 15000 });
     await expect(page.getByText(/1 round · completed/i).first()).toBeVisible({ timeout: 90000 });
     
     const activateBtn = page.getByRole('button', { name: 'Activate Candidate' }).first();
     await expect(activateBtn).toBeVisible();
     await activateBtn.click();
     
-    await page.waitForTimeout(2000);
+    await page.goto('/Settings');
+    await expect(page.getByText(new RegExp(`Active model hash:\\s*(?!${oldHash})[a-f0-9]+`))).toBeVisible({ timeout: 10000 });
     
+    await page.goto('/Federated%20%26%20privacy%20lab');
     const rollbackBtn = page.getByRole('button', { name: 'Rollback to Previous' }).first();
     await expect(rollbackBtn).toBeVisible();
     await rollbackBtn.click();
     
-    await page.waitForTimeout(2000);
+    await page.goto('/Settings');
+    await expect(page.getByText(new RegExp(`Active model hash:\\s*${oldHash}`))).toBeVisible({ timeout: 10000 });
   });
 
   test('8. Accessibility: Reduce Motion Toggle', async ({ page }) => {

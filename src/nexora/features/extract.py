@@ -7,6 +7,7 @@ NAMES = ["eda_mean", "eda_std", "eda_slope", "eda_p95", "temperature_mean", "tem
 LOW = np.array([0, 0, -5, 0, 15, 0, -1, 0, 0, 0, 0, 0], dtype=float)
 HIGH = np.array([50, 20, 5, 50, 45, 5, 1, 5, 3, 5, 16, 20], dtype=float)
 SCHEMA_HASH = hashlib.sha256(json.dumps({"version": "1.0", "names": NAMES, "low": LOW.tolist(), "high": HIGH.tolist()}, sort_keys=True).encode()).hexdigest()
+HIGH_MOTION_STD_THRESHOLD = 0.35
 
 def normalize(values):
     return np.clip((np.asarray(values) - LOW) / (HIGH - LOW), 0, 1).astype(np.float32)

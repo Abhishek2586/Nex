@@ -37,6 +37,23 @@ def main():
     port_c = 8093
     coord_port = 8190
 
+    db_path = root / 'runtime/server.db'
+    if db_path.exists():
+        try:
+            db_path.unlink()
+            print("Cleared E2E database.")
+        except Exception:
+            pass
+
+    coord_jobs_path = root / 'runtime/coordinator/jobs'
+    if coord_jobs_path.exists():
+        import shutil
+        try:
+            shutil.rmtree(coord_jobs_path)
+            print("Cleared E2E coordinator jobs.")
+        except Exception:
+            pass
+
     print("Starting backend for E2E tests...")
     env = os.environ.copy()
     env['BASE_URL'] = f'http://127.0.0.1:{port}'

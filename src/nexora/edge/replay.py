@@ -7,7 +7,7 @@ from nexora.edge.store import rows, save, event
 from nexora.edge.inference import get_predictor
 from nexora.edge.policy import evaluate_policy
 from nexora.data.synthetic import generate_subject
-from nexora.features.extract import extract
+from nexora.features.extract import extract, HIGH_MOTION_STD_THRESHOLD
 
 async def replay_task():
     while True:
@@ -46,7 +46,7 @@ async def replay_task():
                         pred = {'prediction_id': str(uuid.uuid4()), 'abstained': True, 'reason': feat['reason'], 'source': 'Synthetic'}
                         event(s, 'prediction', pred)
                         s['latest_prediction'] = pred
-                    elif feat['values'][8] > 0.35:
+                    elif feat['values'][8] > HIGH_MOTION_STD_THRESHOLD:
                         pred = {'prediction_id': str(uuid.uuid4()), 'abstained': True, 'reason': 'Signal quality is insufficient (high motion)', 'source': 'Synthetic'}
                         event(s, 'prediction', pred)
                         s['latest_prediction'] = pred

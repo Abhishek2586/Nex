@@ -101,6 +101,9 @@ def main():
         subprocess.run([sys.executable, 'scripts/generate_local_certs.py'], cwd=root, check=True)
         certs = root / 'runtime/control/certs'
         os.environ['NEXORA_COORDINATOR_URL'] = f'https://127.0.0.1:{args.coordinator_port}'
+        os.environ['NEXORA_CLIENT_A_URL'] = f'https://127.0.0.1:{args.port}'
+        os.environ['NEXORA_CLIENT_B_URL'] = f'https://127.0.0.1:{args.port_b}'
+        os.environ['NEXORA_CLIENT_C_URL'] = f'https://127.0.0.1:{args.port_c}'
         os.environ['NEXORA_CA_FILE'] = str(certs / 'ca.pem')
         coordinator_command += ['--ssl-keyfile', str(certs / 'server.key'), '--ssl-certfile', str(certs / 'server.pem')]
         ssl_options = {'ssl_keyfile': str(certs / 'server.key'), 'ssl_certfile': str(certs / 'server.pem')}
@@ -108,6 +111,9 @@ def main():
         env_a['NEXORA_CA_FILE'] = env_b['NEXORA_CA_FILE'] = env_c['NEXORA_CA_FILE'] = str(certs / 'ca.pem')
     else:
         os.environ['NEXORA_COORDINATOR_URL'] = f'http://127.0.0.1:{args.coordinator_port}'
+        os.environ['NEXORA_CLIENT_A_URL'] = f'http://127.0.0.1:{args.port}'
+        os.environ['NEXORA_CLIENT_B_URL'] = f'http://127.0.0.1:{args.port_b}'
+        os.environ['NEXORA_CLIENT_C_URL'] = f'http://127.0.0.1:{args.port_c}'
         os.environ.pop('NEXORA_CA_FILE', None)
         env_a['NEXORA_COORDINATOR_URL'] = env_b['NEXORA_COORDINATOR_URL'] = env_c['NEXORA_COORDINATOR_URL'] = f'http://127.0.0.1:{args.coordinator_port}'
 

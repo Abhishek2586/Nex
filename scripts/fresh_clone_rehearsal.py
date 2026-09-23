@@ -38,8 +38,6 @@ def main():
     npm = get_npm()
     npx = get_npx()
     
-    start_time = datetime.datetime.now(datetime.timezone.utc).isoformat()
-    
     remote_url, head_sha = get_git_info(root)
     if remote_url == "unknown" or head_sha == "unknown":
         print("Must be run from inside a valid git repository with remote 'origin'.")
@@ -59,6 +57,9 @@ def main():
         "commands": [],
         "success": False
     }
+
+    clone_python = None
+    basetemp = None
 
     try:
         # Step 4-5: Clone and checkout
@@ -104,11 +105,11 @@ def main():
         # Step 9: Run stages
         stages = [
             ("Install Backend Deps", [clone_python, "-m", "pip", "install", "-e", ".[dev]"], clone_dir),
-            ("Install Frontend Deps", [npm, "install"], clone_dir/"frontend"),
+            ("Install Frontend Deps", [npm, "ci"], clone_dir/"frontend"),
             ("Bootstrap", [clone_python, "scripts/bootstrap.py"], clone_dir),
-            ("Prepare Demo", [clone_python, "scripts/prepare_demo.py"], clone_dir),
+            ("Prepare Core", [clone_python, "scripts/prepare_core.py"], clone_dir),
             ("Doctor", [clone_python, "scripts/doctor.py"], clone_dir),
-            ("Pytest", [clone_python, "-m", "pytest", "-q", "-p", "no:cacheprovider", f"--basetemp={basetemp}", "tests/"], clone_dir),
+            ("Pytest", [clone_python, "-m", "pytest", "-q", "-p", "no:cacheprovider", f"--basetemp={basetemp}", "--junitxml=reports/pytest.xml", "tests/"], clone_dir),
             ("Frontend Build", [npm, "run", "build"], clone_dir/"frontend"),
             ("Frontend Unit Tests", [npm, "run", "test"], clone_dir/"frontend"),
             ("Playwright Install", [npx, "playwright", "install", "--with-deps"], clone_dir/"frontend"),
@@ -129,8 +130,25 @@ def main():
                 subprocess.run([clone_python, "scripts/stop.py"], cwd=clone_dir)
                 
         # Parse test results from clone artifacts
-        report["backend_tests_passed"] = None
-        report["frontend_tests_passed"] = None
+        report["backend_tests"] = None
+        report["frontend_tests"] = None
+        
+        # Parse pytest.xml
+        import xml.etree.ElementTree as ET
+        pytest_xml = clone_dir / 'reports' / 'pytest.xml'
+        if pytest_xml.exists():
+            try:
+                tree = ET.parse(pytest_xml)
+                testsuite = tree.getroot().find('.//testsuite')
+                if testsuite is not None:
+                    report["backend_tests"] = {
+                        "passed": int(testsuite.get("tests", 0)) - int(testsuite.get("failures", 0)) - int(testsuite.get("errors", 0)) - int(testsuite.get("skipped", 0)),
+                        "failed": int(testsuite.get("failures", 0)),
+                        "errors": int(testsuite.get("errors", 0)),
+                        "skipped": int(testsuite.get("skipped", 0))
+                    }
+            except Exception:
+                pass
         report["playwright_expected"] = None
         report["playwright_unexpected"] = None
         report["playwright_flaky"] = None
@@ -158,7 +176,7 @@ def main():
         report["error"] = str(e)
     finally:
         # Step 10 & 11: Cleanup backend and processes
-        if 'clone_dir' in locals() and clone_dir.exists():
+        if clone_python and clone_dir.exists():
             print("Ensuring backend processes are stopped...")
             subprocess.run([clone_python, "scripts/stop.py"], cwd=clone_dir)
             

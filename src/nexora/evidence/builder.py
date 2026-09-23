@@ -155,8 +155,8 @@ def build_evidence_package(root: Path, output_path: Path) -> dict[str, Any]:
     except Exception: pass
     
     reload_state: str = "unknown"
-    reload_error: str | None = None
-    loaded_model_hash: str | None = None
+    reload_error: Any = None
+    loaded_model_hash: Any = None
     try:
         from nexora.edge.inference import get_reload_state
         state = get_reload_state()

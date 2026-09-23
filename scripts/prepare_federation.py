@@ -11,6 +11,7 @@ Task 5: Before reusing a completed federation run, validate ALL of:
 
 If any mismatch: run a new experiment.
 """
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -60,6 +61,26 @@ def _is_reusable_run(manifest: dict, mode: str, dataset: str, rounds: int) -> tu
         
     if not manifest.get("base_model_hash"):
         return False, "base_model_hash_missing"
+        
+    run_id = manifest.get("run_id")
+    if not run_id:
+        return False, "run_id_missing"
+        
+    run_dir = ROOT / "artifacts" / "runs" / run_id
+    base_model = run_dir / "round-0.safetensors"
+    if not base_model.exists():
+        return False, "round-0_missing"
+    if hashlib.sha256(base_model.read_bytes()).hexdigest() != manifest["base_model_hash"]:
+        return False, "round-0_hash_mismatch"
+        
+    if "model_hash" not in manifest:
+        return False, "final_model_hash_missing"
+    
+    final_model = run_dir / f"round-{rounds}.safetensors"
+    if not final_model.exists():
+        return False, "final_round_missing"
+    if hashlib.sha256(final_model.read_bytes()).hexdigest() != manifest["model_hash"]:
+        return False, "final_round_hash_mismatch"
     
     return True, ""
 

@@ -47,14 +47,22 @@ def _validate_neural_model(kind: str) -> tuple[bool, str]:
     if meta.get("source") not in ("synthetic", "Synthetic"):
         return False, f"wrong_source:{meta.get('source')}"
 
+    # feature_schema_hash check for both
+    if meta.get("feature_schema_hash") != SCHEMA_HASH:
+        return False, f"schema_hash_mismatch:{meta.get('feature_schema_hash')[:8] if meta.get('feature_schema_hash') else 'none'}"
+
+    # dataset hash checking for both
+    dataset_manifest = ROOT / 'data' / 'synthetic' / 'manifest.json'
+    if not dataset_manifest.exists():
+        return False, "dataset_manifest_missing"
+    ds_meta = json.loads(dataset_manifest.read_text())
+    if meta.get("dataset_hash") != ds_meta.get("windows_sha256"):
+        return False, "dataset_hash_mismatch"
+
     if kind == "neural":
         # architecture_id check
         if meta.get("architecture_id") != ARCHITECTURE_ID:
             return False, f"architecture_mismatch:{meta.get('architecture_id')}"
-
-        # feature_schema_hash check
-        if meta.get("feature_schema_hash") != SCHEMA_HASH:
-            return False, f"schema_hash_mismatch:{meta.get('feature_schema_hash')[:8] if meta.get('feature_schema_hash') else 'none'}"
 
         # threshold / validation_score required fields
         if "threshold" not in meta:
@@ -63,14 +71,6 @@ def _validate_neural_model(kind: str) -> tuple[bool, str]:
             return False, "threshold_selection_metric_missing"
         if "validation_score" not in meta:
             return False, "validation_score_missing"
-            
-        # dataset hash checking
-        dataset_manifest = ROOT / 'data' / 'synthetic' / 'manifest.json'
-        if not dataset_manifest.exists():
-            return False, "dataset_manifest_missing"
-        ds_meta = json.loads(dataset_manifest.read_text())
-        if meta.get("dataset_hash") != ds_meta.get("windows_sha256"):
-            return False, "dataset_hash_mismatch"
 
     # artifact file exists
     if kind == "neural":
@@ -82,10 +82,12 @@ def _validate_neural_model(kind: str) -> tuple[bool, str]:
         return False, "artifact_missing"
 
     # model_hash matches actual bytes
-    if "model_hash" in meta:
-        actual_hash = hashlib.sha256(artifact.read_bytes()).hexdigest()
-        if actual_hash != meta["model_hash"]:
-            return False, f"hash_mismatch:stored={meta['model_hash'][:8]} actual={actual_hash[:8]}"
+    if "model_hash" not in meta:
+        return False, "model_hash_missing"
+        
+    actual_hash = hashlib.sha256(artifact.read_bytes()).hexdigest()
+    if actual_hash != meta["model_hash"]:
+        return False, f"hash_mismatch:stored={meta['model_hash'][:8]} actual={actual_hash[:8]}"
 
     # model loads successfully (neural only — baseline uses numpy)
     if kind == "neural":
@@ -120,8 +122,14 @@ def main():
                 dataset_reason = "wrong_splits"
             elif not m.get("clients"):
                 dataset_reason = "missing_clients"
+            elif any(c not in m.get("clients", {}) for c in ("client-a", "client-b", "client-c")) or any(not m["clients"][c] for c in ("client-a", "client-b", "client-c")):
+                dataset_reason = "invalid_client_partitions"
             elif m.get("windows_sha256") != hashlib.sha256(data_npz.read_bytes()).hexdigest():
                 dataset_reason = "windows_sha256_mismatch"
+            elif m.get("feature_schema_hash") != __import__("nexora.features.extract", fromlist=["SCHEMA_HASH"]).SCHEMA_HASH:
+                dataset_reason = "feature_schema_hash_mismatch"
+            elif any(not (ROOT / f"data/synthetic/subject-{i:03}.npz").is_file() for i in range(24)):
+                dataset_reason = "missing_subject_files"
             else:
                 dataset_valid = True
         except Exception as e:

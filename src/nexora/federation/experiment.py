@@ -33,14 +33,16 @@ def run(rounds=5, private=False, dataset="synthetic"):
     for round_number in range(1, rounds + 1):
         started = time.time()
         client_urls = {
-            "client-a": "http://127.0.0.1:8080/api/v1/train",
-            "client-b": "http://127.0.0.1:8082/api/v1/train",
-            "client-c": "http://127.0.0.1:8083/api/v1/train"
+            "client-a": os.environ.get("NEXORA_CLIENT_A_URL", "http://127.0.0.1:8080") + "/api/v1/train",
+            "client-b": os.environ.get("NEXORA_CLIENT_B_URL", "http://127.0.0.1:8082") + "/api/v1/train",
+            "client-c": os.environ.get("NEXORA_CLIENT_C_URL", "http://127.0.0.1:8083") + "/api/v1/train"
         }
-        if os.environ.get('NEXORA_CA_FILE'):
-            client_urls = {k: v.replace('http:', 'https:') for k, v in client_urls.items()}
         
-        ca_file = os.environ.get('NEXORA_CA_FILE', True)
+        ca_file = os.environ.get('NEXORA_CA_FILE')
+        if ca_file:
+            client_urls = {k: v.replace('http:', 'https:') for k, v in client_urls.items()}
+        else:
+            ca_file = True
 
         client_meta = []
         outputs = []
