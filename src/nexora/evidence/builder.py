@@ -144,9 +144,9 @@ def build_evidence_package(root: Path, output_path: Path) -> dict[str, Any]:
     except Exception:
         pass
         
-    dataset_hash = None
-    dataset_seed = 42
-    dataset_source = "Synthetic"
+    dataset_hash: str | None = None
+    dataset_seed: int = 42
+    dataset_source: str = "Synthetic"
     try:
         ds_manifest = json.loads((root / "data/synthetic/manifest.json").read_text())
         dataset_hash = ds_manifest.get("windows_sha256")
@@ -154,14 +154,15 @@ def build_evidence_package(root: Path, output_path: Path) -> dict[str, Any]:
         dataset_source = ds_manifest.get("source", "Synthetic")
     except Exception: pass
     
-    reload_state = "unknown"
-    reload_error = None
+    reload_state: str = "unknown"
+    reload_error: str | None = None
     loaded_model_hash: str | None = None
     try:
         from nexora.edge.inference import get_reload_state
         state = get_reload_state()
         reload_state = str(state.get("reload_status") or "unknown")
-        reload_error = state.get("reload_error")
+        err = state.get("reload_error")
+        reload_error = str(err) if err else None
         loaded_hash = state.get("loaded_model_hash")
         loaded_model_hash = str(loaded_hash) if loaded_hash else None
     except Exception: pass

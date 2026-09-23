@@ -46,6 +46,10 @@ async def replay_task():
                         pred = {'prediction_id': str(uuid.uuid4()), 'abstained': True, 'reason': feat['reason'], 'source': 'Synthetic'}
                         event(s, 'prediction', pred)
                         s['latest_prediction'] = pred
+                    elif feat['values'][8] > 0.35:
+                        pred = {'prediction_id': str(uuid.uuid4()), 'abstained': True, 'reason': 'Signal quality is insufficient (high motion)', 'source': 'Synthetic'}
+                        event(s, 'prediction', pred)
+                        s['latest_prediction'] = pred
                     else:
                         predictor = get_predictor()
                         if predictor:

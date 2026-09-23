@@ -42,7 +42,7 @@ test.describe('NEXORA Dashboard Flows', () => {
     
     // Stop session
     await page.getByRole('link', { name: 'Overview' }).click();
-    await expect(page.locator('.status').filter({ hasText: /running|stopped/ })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(/Status:\s*(running|stopped)/i)).toBeVisible({ timeout: 15000 });
     
     const stopBtn = page.getByRole('button', { name: 'Stop' });
     if (await stopBtn.isEnabled()) {
@@ -60,7 +60,7 @@ test.describe('NEXORA Dashboard Flows', () => {
     
     // Verify missing data abstention
     await page.getByRole('link', { name: 'Live session' }).click();
-    await expect(page.getByText(/Abstained:.*(?:missing|low quality|Missing)/i)).toBeVisible({ timeout: 40000 });
+    await expect(page.getByText(/Abstained:.*(?:insufficient_coverage|unrepairable_gap|missing|low quality)/i)).toBeVisible({ timeout: 40000 });
     
     // Stop session
     await page.getByRole('link', { name: 'Overview' }).click();
@@ -124,7 +124,7 @@ test.describe('NEXORA Dashboard Flows', () => {
     await page.getByRole('combobox', { name: 'Scenario' }).selectOption('normal');
     await page.getByRole('button', { name: 'Start synthetic session' }).click();
     
-    await page.goto('/AI%20insights');
+    await page.getByRole('link', { name: 'AI insights' }).click();
     const explainBtn = page.getByRole('button', { name: 'Explain latest prediction' });
     await expect(explainBtn).toBeVisible({ timeout: 40000 });
     await explainBtn.click();
