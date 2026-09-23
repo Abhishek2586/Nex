@@ -60,7 +60,8 @@ def run(rounds=5, private=False, dataset="synthetic"):
                     'base_model_hash': base_hash,
                     'feature_schema_hash': SCHEMA_HASH,
                     'architecture_id': ARCHITECTURE_ID,
-                    'client_id': c_id
+                    'client_id': c_id,
+                    'protocol_version': 'nexora-fed-v1'
                 }
                 
                 with base.open('rb') as f:
@@ -84,8 +85,9 @@ def run(rounds=5, private=False, dataset="synthetic"):
 
         base_state = _numpy_state(base)
         updates = []
-        for meta, path in zip(client_meta, outputs):
+        for expected_c_id, meta, path in zip(client_urls.keys(), client_meta, outputs):
             # Validate response protocol metadata
+            if meta.get("protocol_version") != "nexora-fed-v1": raise RuntimeError("Client update protocol_version mismatch")
             if meta.get("run_id") != run_id: raise RuntimeError("Client update run_id mismatch")
             if meta.get("round_id") != str(round_number): raise RuntimeError("Client update round_id mismatch")
             if meta.get("base_model_hash") != base_hash: raise RuntimeError("Client update base_model_hash mismatch")
@@ -105,13 +107,15 @@ def run(rounds=5, private=False, dataset="synthetic"):
                 if not np.isfinite(state[k]).all():
                     raise RuntimeError(f"Client update contains non-finite values on {k}")
                     
-            # Task 6: Verify update_hash matches actual received bytes
+            # Task 6 & 9: Verify update_hash matches actual received bytes (MANDATORY)
+            if "update_hash" not in meta:
+                raise RuntimeError("Update hash missing from client metadata")
             u_hash = hashlib.sha256(path.read_bytes()).hexdigest()
-            if meta.get("update_hash") and meta["update_hash"] != u_hash:
-                raise RuntimeError(f"Update hash mismatch for {c_id}: manifest={meta['update_hash'][:8]} actual={u_hash[:8]}")
+            if meta["update_hash"] != u_hash:
+                raise RuntimeError(f"Update hash mismatch for {expected_c_id}: manifest={meta['update_hash'][:8]} actual={u_hash[:8]}")
             # Task 6: Verify response client_id matches the URL/identity we sent to
-            if meta.get("client_id") != c_id:
-                raise RuntimeError(f"Client ID binding mismatch: sent to {c_id} but response claims {meta.get('client_id')}")
+            if meta.get("client_id") != expected_c_id:
+                raise RuntimeError(f"Client ID binding mismatch: sent to {expected_c_id} but response claims {meta.get('client_id')}")
             # Unique update hash check
             if any(h == u_hash for _, _, h in updates):
                 raise RuntimeError("Duplicate update hash detected")
@@ -201,7 +205,10 @@ def run(rounds=5, private=False, dataset="synthetic"):
         "status": "completed",
         "lifecycle_state": "candidate",
         "protocol_version": "nexora-fed-v1",
+        "dataset_hash": manifest.get("windows_sha256"),
         "base_model_source": "random_init",
+        "base_model_hash": hashlib.sha256((root / "round-0.safetensors").read_bytes()).hexdigest(),
+        "base_model_architecture": ARCHITECTURE_ID,
         "base_model_note": "Federation trains a fresh global candidate from random initialization, not the current active model."
     }
     (root / "manifest.json").write_text(json.dumps(result, indent=2))

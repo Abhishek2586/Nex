@@ -194,6 +194,15 @@ def get_active_model():
         raise HTTPException(404, 'No active model')
     from nexora.edge.inference import get_reload_state
     meta = json.loads(target_meta.read_text())
+    
+    # Task: include dataset_hash from manifest.windows_sha256 if available
+    dataset_manifest_path = ROOT / 'data' / 'synthetic' / 'manifest.json'
+    if dataset_manifest_path.exists():
+        try:
+            d_manifest = json.loads(dataset_manifest_path.read_text())
+            meta['dataset_hash'] = d_manifest.get('windows_sha256')
+        except Exception: pass
+        
     reload_state = get_reload_state()
     meta['reload_state'] = reload_state
     return meta
@@ -229,6 +238,7 @@ async def train(
     feature_schema_hash: str = Form(...),
     architecture_id: str = Form(...),
     client_id: str = Form(...),
+    protocol_version: str = Form(...),
     authorization: str = Header(None)
 ):
     expected_token = (ROOT / 'runtime/control/tokens.json').read_text() if (ROOT / 'runtime/control/tokens.json').exists() else '{}'
@@ -243,6 +253,9 @@ async def train(
     # Validate inputs before touching the filesystem (Task 7)
     _validate_run_id(run_id)
     validated_round = _validate_round_id(round_id)
+    
+    if protocol_version != 'nexora-fed-v1':
+        raise HTTPException(400, f'Unsupported protocol_version: {protocol_version}')
 
     work_dir = ROOT / 'runtime' / cid / 'federation' / run_id
     work_dir.mkdir(parents=True, exist_ok=True)
@@ -258,6 +271,7 @@ async def train(
 
     try:
         metadata = train_client(cid, base_path, output_path, private, run_id, str(validated_round), base_model_hash, feature_schema_hash, architecture_id)
+        metadata['protocol_version'] = protocol_version
     except Exception as e:
         raise HTTPException(500, f'Training failed: {str(e)}')
 

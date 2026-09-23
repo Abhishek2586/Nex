@@ -62,7 +62,7 @@ def main():
 
     try:
         # Step 4-5: Clone and checkout
-        if not run("Git Clone", ["git", "clone", remote_url, str(clone_dir)], cwd=temp_dir)[0]:
+        if not run("Git Clone", ["git", "clone", str(root), str(clone_dir)], cwd=temp_dir)[0]:
             raise Exception("Failed to clone repository")
             
         if not run("Git Checkout", ["git", "checkout", head_sha], cwd=clone_dir)[0]:

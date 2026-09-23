@@ -50,6 +50,17 @@ def _is_reusable_run(manifest: dict, mode: str, dataset: str, rounds: int) -> tu
         return False, f"protocol_version:{manifest.get('protocol_version')}"
     if len(manifest.get("rounds", [])) != rounds:
         return False, f"round_count:{len(manifest.get('rounds', []))}!={rounds}"
+        
+    ds_meta_path = ROOT / "data" / dataset / "manifest.json"
+    if not ds_meta_path.exists():
+        return False, "dataset_manifest_missing"
+    ds_hash = json.loads(ds_meta_path.read_text()).get("windows_sha256")
+    if manifest.get("dataset_hash") != ds_hash:
+        return False, f"dataset_hash_mismatch:{manifest.get('dataset_hash')}"
+        
+    if not manifest.get("base_model_hash"):
+        return False, "base_model_hash_missing"
+    
     return True, ""
 
 

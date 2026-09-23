@@ -15,13 +15,28 @@ ENV["PYTHONPATH"] = str(ROOT / "src") + os.pathsep + str(ROOT)
 
 
 def _stack_is_already_running() -> bool:
-    """Check if an existing owned NEXORA process manifest exists."""
+    """Check if an existing owned NEXORA process manifest exists AND process is actually alive."""
     manifest_path = ROOT / 'runtime/control/process.json'
     if not manifest_path.exists():
         return False
     try:
         data = json.loads(manifest_path.read_text())
-        return bool(data.get('pid'))
+        pid = data.get('pid')
+        if not pid:
+            return False
+            
+        import psutil
+        try:
+            proc = psutil.Process(pid)
+            # Check if process is alive and command line includes scripts/start.py
+            if proc.is_running() and any('scripts/start.py' in cmd or r'scripts\start.py' in cmd for cmd in proc.cmdline()):
+                return True
+        except psutil.NoSuchProcess:
+            pass
+            
+        # Stale manifest, clean it up
+        manifest_path.unlink(missing_ok=True)
+        return False
     except Exception:
         return False
 

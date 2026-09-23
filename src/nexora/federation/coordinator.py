@@ -164,8 +164,20 @@ def activate_model(run_id: str, body: dict | None = None):
         prev = json.loads(active_path.read_text())
         prev['lifecycle_state'] = 'retired'
         prev['retired_at'] = time.time()
+        # Task 12: Ensure only 'retired' or 'rejected' models are in history
         history.append(prev)
         history_path.write_text(json.dumps(history, indent=2))
+        
+        # Also update previous active model's run manifest to retired
+        if prev.get('run_id'):
+            prev_run_path = ROOT / 'artifacts' / 'runs' / prev['run_id'] / 'manifest.json'
+            if prev_run_path.exists():
+                try:
+                    p_manifest = json.loads(prev_run_path.read_text())
+                    p_manifest['lifecycle_state'] = 'retired'
+                    prev_run_path.write_text(json.dumps(p_manifest, indent=2))
+                except Exception:
+                    pass
 
     # Task 9: Also update the run manifest lifecycle_state to active
     manifest['lifecycle_state'] = 'active'
@@ -187,7 +199,36 @@ def rollback_model():
     if not history:
         raise HTTPException(400, 'History is empty')
         
+    current_active = json.loads(active_path.read_text())
+    current_active['lifecycle_state'] = 'retired'
+    current_active['retired_at'] = time.time()
+    
     previous = history.pop()
+    previous['lifecycle_state'] = 'active'
+    previous['reactivated_at'] = time.time()
+    
+    # Update current_active run manifest
+    if current_active.get('run_id'):
+        cur_run_path = ROOT / 'artifacts' / 'runs' / current_active['run_id'] / 'manifest.json'
+        if cur_run_path.exists():
+            try:
+                cur_manifest = json.loads(cur_run_path.read_text())
+                cur_manifest['lifecycle_state'] = 'retired'
+                cur_run_path.write_text(json.dumps(cur_manifest, indent=2))
+            except Exception: pass
+            
+    # Update previous run manifest
+    if previous.get('run_id'):
+        prev_run_path = ROOT / 'artifacts' / 'runs' / previous['run_id'] / 'manifest.json'
+        if prev_run_path.exists():
+            try:
+                prev_manifest = json.loads(prev_run_path.read_text())
+                prev_manifest['lifecycle_state'] = 'active'
+                prev_run_path.write_text(json.dumps(prev_manifest, indent=2))
+            except Exception: pass
+            
+    history.append(current_active)
+        
     active_path.write_text(json.dumps(previous, indent=2))
     history_path.write_text(json.dumps(history, indent=2))
     return previous

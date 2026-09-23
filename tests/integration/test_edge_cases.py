@@ -53,7 +53,8 @@ def test_missing_auth_on_training():
             'base_model_hash': 'abc',
             'feature_schema_hash': 'def',
             'architecture_id': 'ghi',
-            'client_id': 'client-a'
+            'client_id': 'client-a',
+            'protocol_version': 'nexora-fed-v1'
         }
         # Missing auth header should fail with 401
         res = c.post('/api/v1/train', files=files, data=data)

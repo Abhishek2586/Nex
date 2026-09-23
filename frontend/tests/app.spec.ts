@@ -64,7 +64,7 @@ test.describe('NEXORA Dashboard Flows', () => {
     await page.getByRole('button', { name: 'Stop' }).click();
   });
 
-  test('4. Research Mode: Interventions', async ({ page }) => {
+  test('4. Research Mode: Interventions & Prompt Isolation', async ({ page }) => {
     test.setTimeout(60000);
     await page.goto('/Overview');
     
@@ -74,11 +74,23 @@ test.describe('NEXORA Dashboard Flows', () => {
     
     await page.getByRole('link', { name: 'Interventions' }).click();
     await expect(page.getByText('Prompts & feedback')).toBeVisible();
+    await expect(page.getByText('Physical output not connected.').first()).toBeVisible();
     
-    // Stop session
+    // Check prompt isolation: go back, stop, start a new session (normal), ensure prompt doesn't bleed over
     await page.getByRole('link', { name: 'Overview' }).click();
     await page.getByRole('button', { name: 'Stop' }).waitFor({ state: 'visible', timeout: 15000 });
     await page.getByRole('button', { name: 'Stop' }).click();
+    
+    await page.getByRole('combobox', { name: 'Scenario' }).selectOption('normal');
+    await page.getByRole('button', { name: 'Start synthetic session' }).click();
+    
+    // Check user guidance page (should have no active prompts for normal)
+    await page.getByText('Research Mode').click(); // switch to user
+    await page.getByRole('link', { name: 'Guidance' }).click();
+    await expect(page.getByText('No action is needed right now.')).toBeVisible();
+    
+    await page.getByRole('link', { name: 'Home' }).click();
+    await page.getByRole('button', { name: 'End session' }).click();
   });
 
   test('5. AI Insights & Explanations', async ({ page }) => {
@@ -87,6 +99,11 @@ test.describe('NEXORA Dashboard Flows', () => {
     
     // Check confusion matrix renders (empty state or populated)
     await expect(page.getByText('Confusion Matrix').first()).toBeVisible();
+    
+    // Attribution section
+    await expect(page.getByText('Per-prediction attribution')).toBeVisible();
+    const explainBtn = page.getByRole('button', { name: 'Explain latest prediction' });
+    await expect(explainBtn).toBeVisible();
   });
 
   test('6. Federated Lab: Run FedAvg', async ({ page }) => {
@@ -101,9 +118,11 @@ test.describe('NEXORA Dashboard Flows', () => {
 
   test('7. Model Rollback Action', async ({ page }) => {
     await page.goto('/Federated%20%26%20privacy%20lab');
-    await expect(page.getByText('Federated').first()).toBeVisible();
-    // In a fresh environment without a previous active model, the button is hidden.
-    // We just ensure the page loads and we can navigate to it.
+    await expect(page.getByText('Client Topology')).toBeVisible();
+    // Test if Rollback button renders when there's an experiment
+    const rollbackBtn = page.getByRole('button', { name: 'Rollback to Previous' });
+    // In a fresh clone, there may not be completed runs yet, so we just verify the route works.
+    await expect(page.getByText('Measured experiment runs')).toBeVisible();
   });
 
   test('8. Accessibility: Reduce Motion Toggle', async ({ page }) => {

@@ -63,6 +63,14 @@ def _validate_neural_model(kind: str) -> tuple[bool, str]:
             return False, "threshold_selection_metric_missing"
         if "validation_score" not in meta:
             return False, "validation_score_missing"
+            
+        # dataset hash checking
+        dataset_manifest = ROOT / 'data' / 'synthetic' / 'manifest.json'
+        if not dataset_manifest.exists():
+            return False, "dataset_manifest_missing"
+        ds_meta = json.loads(dataset_manifest.read_text())
+        if meta.get("dataset_hash") != ds_meta.get("windows_sha256"):
+            return False, "dataset_hash_mismatch"
 
     # artifact file exists
     if kind == "neural":
@@ -92,11 +100,38 @@ def _validate_neural_model(kind: str) -> tuple[bool, str]:
 def main():
     steps = []
 
-    if not (ROOT / "data/synthetic/manifest.json").is_file():
+    # Validate dataset reuse strictly
+    dataset_valid = False
+    dataset_reason = "missing"
+    data_manifest = ROOT / "data/synthetic/manifest.json"
+    data_npz = ROOT / "data/synthetic/windows.npz"
+    if data_manifest.is_file() and data_npz.is_file():
+        try:
+            m = json.loads(data_manifest.read_text())
+            if m.get("source") != "Synthetic":
+                dataset_reason = "wrong_source"
+            elif m.get("seed") != 42:
+                dataset_reason = "wrong_seed"
+            elif m.get("sample_hz") != 4:
+                dataset_reason = "wrong_sample_hz"
+            elif m.get("subject_count") != 24:
+                dataset_reason = "wrong_subject_count"
+            elif len(m.get("splits", {}).get("train", [])) != 15 or len(m.get("splits", {}).get("validation", [])) != 3 or len(m.get("splits", {}).get("test", [])) != 6:
+                dataset_reason = "wrong_splits"
+            elif not m.get("clients"):
+                dataset_reason = "missing_clients"
+            elif m.get("windows_sha256") != hashlib.sha256(data_npz.read_bytes()).hexdigest():
+                dataset_reason = "windows_sha256_mismatch"
+            else:
+                dataset_valid = True
+        except Exception as e:
+            dataset_reason = f"read_error_{e}"
+
+    if not dataset_valid:
         run("data", "generate", "--profile", "demo", "--seed", "42")
-        steps.append("generated Synthetic data")
+        steps.append(f"regenerated_due_to_{dataset_reason}")
     else:
-        steps.append("reused matching Synthetic data")
+        steps.append("reused_valid_synthetic_data")
 
     for kind in ("baseline", "neural"):
         valid, reason = _validate_neural_model(kind)
@@ -113,6 +148,7 @@ def main():
         meta['source'] = 'synthetic'
         meta['artifact_path'] = str(ROOT / "models/synthetic/neural")
         meta['lifecycle_state'] = 'active'
+        meta['dataset_hash'] = json.loads((ROOT / 'data/synthetic/manifest.json').read_text()).get('windows_sha256')
         registry_active.write_text(json.dumps(meta, indent=2))
         steps.append("activated synthetic neural model")
 
