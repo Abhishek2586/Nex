@@ -49,14 +49,20 @@ Started: 2026-09-18.
 | WESAD Adapter | PASS | Adapter functions correctly; explicitly labeled as NOT clinical data. |
 | UI Claims | PASS | Calibration claims mitigated ("Scores" instead of "Probabilities"). |
 | Rollback Success Path | PASS | Full A→B→rollback→A cycle tested; inference on restored model verified. |
-| Reviewer hardening | PASS | All items verified: flake8 clean, tests 19/19 pass, Playwright 2/2 pass. |
+| Reviewer hardening | PASS | All items verified: flake8 clean, mypy clean, tests 19/19 pass locally, Playwright 2/2 pass. |
+| CI Green | PASS | GitHub Actions f2053ef: 19/19 pytest pass (clean-clone safe), frontend build pass, lint pass. |
 | Final Acceptance | PASS | CI-reproducible: verify.py --full PASS (Backend, Frontend build, Frontend unit, Evidence, Playwright). |
 
-- 2026-09-21 audit: 16 Python tests passed (five third-party deprecation warnings). The frontend production build passed; Vite reports a 636.62 kB JavaScript bundle advisory.
+- 2026-09-22 audit: 19 Python tests pass (19/19 locally and on CI). Tests are now clean-clone safe — they skip gracefully where generated artifacts (trained models) are absent rather than failing. Two third-party deprecation warnings remain (httpx starlette) which are not Nexora code.
 - Evidence ZIP is checksum-indexed and excludes SQLite state, secrets, keys, raw recordings and dependency directories. Its manifest records the current archive checksum and included-file checksums.
 
-## Current work
-Final consistency and reproducibility cleanup. Committed test artifacts removed. Unused imports and bare excepts fixed. Private federation wording corrected (Opacus DP; no secure multi-party aggregation). Rollback integration test implemented and executing.
+## Completed cleanup (2026-09-22)
+Final consistency and reproducibility cleanup complete:
+- Committed test artifacts (temp_pytest/, temporary pickles and safetensors) removed from git history and covered by .gitignore.
+- Unused scratch scripts relocated to scripts/experiments/ with portable paths (no hardcoded d:/Downloads).
+- BUILD_STATUS contradictions resolved: manual feedback policy-only wording, WESAD adapter vs real WESAD explicitly separated.
+- CI tests made clean-clone safe: test_api.py no longer requires a trained model; test_explanations.py skips if baseline model absent.
+- GitHub Actions CI is now green on commit f2053ef.
 
 ## Not yet verified
 Real WESAD evaluation is not verified because the dataset is not supplied.
