@@ -70,3 +70,35 @@ def test_schema_validation_events():
         # Non-existent session events
         res = c.get('/api/v1/sessions/non_existent_session/events')
         assert res.status_code == 404
+
+def test_missing_data_abstention():
+    from nexora.data.synthetic import generate_subject
+    from nexora.features.extract import extract
+    samples, labels, posture = generate_subject(0, seed=42, scenario="missing_data")
+    # First 30s window (0 to 119)
+    window = samples[0:120]
+    feat = extract(window)
+    assert feat["values"] is None
+    assert feat["reason"] == "insufficient_coverage"
+
+def test_high_motion_abstention():
+    from nexora.data.synthetic import generate_subject
+    from nexora.features.extract import extract, HIGH_MOTION_STD_THRESHOLD
+    samples, labels, posture = generate_subject(0, seed=42, scenario="high_motion")
+    window = samples[0:120]
+    feat = extract(window)
+    assert feat["values"] is not None
+    # Feature 8 is magnitude_std
+    assert feat["values"][8] > HIGH_MOTION_STD_THRESHOLD
+
+def test_coordinator_url_resolution():
+    import os
+    from nexora.federation.coordinator import app as coord_app
+    from fastapi.testclient import TestClient
+    os.environ['NEXORA_CLIENT_A_URL'] = 'http://127.0.0.1:9090'
+    with TestClient(coord_app) as c:
+        res = c.get('/health')
+        assert res.status_code == 200
+        data = res.json()
+        assert 'client_urls' in data
+        assert data['client_urls']['client-a'] == 'http://127.0.0.1:9090'
