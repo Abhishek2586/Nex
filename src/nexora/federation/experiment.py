@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import time
 import uuid
+import httpx
 import numpy as np
 import torch
 from safetensors.torch import load_file, save_file
@@ -26,7 +27,6 @@ def run(rounds=5, private=False, dataset="synthetic"):
     base = root / "round-0.safetensors"
     save_file(model.state_dict(), str(base))
     history = []
-    import httpx
     for round_number in range(1, rounds + 1):
         started = time.time()
         client_urls = {
@@ -49,7 +49,6 @@ def run(rounds=5, private=False, dataset="synthetic"):
             for c_id, url in client_urls.items():
                 output = root / f"round-{round_number}-{c_id}.safetensors"
                 headers = {'Authorization': f"Bearer {tokens.get(c_id, '')}"}
-                from nexora.ml.train import ARCHITECTURE_ID
                 base_hash = hashlib.sha256(base.read_bytes()).hexdigest()
                 payload = {
                     'private': 'true' if private else 'false',

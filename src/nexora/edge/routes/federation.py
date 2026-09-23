@@ -1,9 +1,14 @@
 import os
 import json
+import shutil
+import zipfile
+import datetime
 import httpx
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, File, UploadFile, Form, Header
+from fastapi.responses import FileResponse
 from pathlib import Path
 from nexora.edge.schemas import ExperimentRequest
+from nexora.federation.client_worker import train_client
 
 router = APIRouter()
 ROOT = Path(__file__).resolve().parents[4]
@@ -171,10 +176,6 @@ def privacy_projection():
     _projection_cache_key = cache_key
     return _projection_cache
 
-from fastapi.responses import FileResponse
-import zipfile
-import datetime
-
 @router.get('/evidence/export')
 def export_evidence():
     timestamp = datetime.datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')
@@ -214,10 +215,6 @@ def export_evidence():
                 
     return FileResponse(path=zip_path, filename=zip_filename, media_type='application/zip')
 
-from fastapi import File, UploadFile, Form, Header
-import uuid
-import shutil
-from nexora.federation.client_worker import train_client
 
 @router.post('/train')
 async def train(
@@ -258,7 +255,6 @@ async def train(
         raise HTTPException(500, 'Output model missing')
         
     # Return the metadata and the trained model file
-    from fastapi.responses import FileResponse
     response = FileResponse(path=output_path, media_type='application/octet-stream')
     response.headers['X-Federation-Metadata'] = json.dumps(metadata)
     return response
