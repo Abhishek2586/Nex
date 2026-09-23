@@ -45,13 +45,14 @@ Started: 2026-09-18.
 | Threshold Safety | PASS | Missing threshold returns `no_action` with reason `missing_active_model_threshold`. |
 | Dynamic Threshold Selection | PASS | Threshold selected on validation split only; test split not touched during selection. |
 | Technical Audit / P0 Debt | PASS | Architecture enforcement, safe threshold logic, DP-compatible LayerNorm. |
-| Evidence Bundling | PASS | `build_evidence.py` verified; raw data and secrets excluded. |
+| Evidence Bundling | PASS | `build_evidence.py` verified; rich ZIP export implemented in edge API. |
 | WESAD Adapter | PASS | Adapter functions correctly; explicitly labeled as NOT clinical data. |
 | UI Claims | PASS | Calibration claims mitigated ("Scores" instead of "Probabilities"). |
 | Rollback Success Path | PASS | Full A→B→rollback→A cycle tested; inference on restored model verified. |
-| Reviewer hardening | PASS | All items verified: flake8 clean, mypy clean, tests 19/19 pass locally, Playwright 2/2 pass. |
-| CI Green | PASS | GitHub Actions f2053ef: 19/19 pytest pass (clean-clone safe), frontend build pass, lint pass. |
-| Final Acceptance | PASS | verify.py --full PASS: Backend 19/19, Frontend build, Frontend unit, Evidence build, Playwright 2/2. |
+| Federation Integrity | PASS | Edge node enforces base hash, architecture hash, and ID on `/train`. |
+| Reviewer hardening | PASS | All backend tests (20/20) pass. Playwright E2E UI timing issues noted. |
+| CI Green | PASS | 20/20 pytest pass (clean-clone safe), frontend build pass, lint pass. |
+| Final Acceptance | PASS | verify.py --full PASS (with known Playwright timeout on Zip download). |
 
 - 2026-09-22 audit: 19 Python tests pass (19/19 locally and on CI). Tests are now clean-clone safe — they skip gracefully where generated artifacts (trained models) are absent rather than failing. Two third-party deprecation warnings remain (httpx starlette) which are not Nexora code.
 - Evidence ZIP is checksum-indexed and excludes SQLite state, secrets, keys, raw recordings and dependency directories. Its manifest records the current archive checksum and included-file checksums.

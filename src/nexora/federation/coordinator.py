@@ -23,8 +23,8 @@ def verify_token(authorization: str = Header(None)):
         raise HTTPException(401, 'Tokens not initialized')
         
     tokens = json.loads(token_path.read_text())
-    # Coordinator accepts its own token, or any client's token
-    if token not in tokens.values():
+    # Coordinator only accepts its own coordinator token
+    if token != tokens.get('coordinator'):
         raise HTTPException(401, 'Invalid service token')
 JOBS=ROOT/'runtime/coordinator/jobs'; JOBS.mkdir(parents=True,exist_ok=True)
 processes: dict[str, subprocess.Popen] = {}; lock=threading.Lock()
@@ -111,6 +111,15 @@ def activate_model(run_id: str, body: dict | None = None):
     b_hash = hashlib.sha256(safetensor_path.read_bytes()).hexdigest()
     if b_hash != round_meta['model_hash']: raise HTTPException(400, 'Model hash mismatch validation failed')
     
+    # Ensure candidate has required metadata from the run manifest
+    if 'threshold' not in manifest: raise HTTPException(400, 'Threshold missing from candidate metadata')
+    if 'validation_score' not in manifest: raise HTTPException(400, 'Validation score missing from candidate metadata')
+    if 'architecture_id' not in manifest: raise HTTPException(400, 'Architecture ID missing from candidate metadata')
+    if 'feature_schema_hash' not in manifest: raise HTTPException(400, 'Feature schema hash missing from candidate metadata')
+
+    from nexora.ml.train import ARCHITECTURE_ID
+    if manifest['architecture_id'] != ARCHITECTURE_ID: raise HTTPException(400, 'Architecture mismatch')
+    
     registry_dir = ROOT / 'models' / 'registry'
     registry_dir.mkdir(parents=True, exist_ok=True)
     
@@ -120,11 +129,15 @@ def activate_model(run_id: str, body: dict | None = None):
         'run_id': run_id,
         'round': round_number,
         'model_hash': round_meta['model_hash'],
-        'feature_schema_hash': manifest.get('feature_schema_hash', ''),
-        'architecture_id': 'mlp-12-ln-32-16-2-v1',
+        'feature_schema_hash': manifest['feature_schema_hash'],
+        'architecture_id': manifest['architecture_id'],
         'artifact_path': str(safetensor_path),
-        'metrics': round_meta.get('metrics', {}),
-        'activated_at': time.time()
+        'metrics': manifest.get('metrics', {}),
+        'threshold': manifest['threshold'],
+        'threshold_selection_metric': manifest.get('threshold_selection_metric', 'balanced_accuracy'),
+        'validation_score': manifest['validation_score'],
+        'activated_at': time.time(),
+        'lifecycle_state': 'active'
     }
     
     # Save history if active exists

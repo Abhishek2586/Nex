@@ -4,41 +4,48 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import time
 
 ROOT = Path(__file__).resolve().parents[1]
 ENV = os.environ.copy()
 ENV["PYTHONPATH"] = str(ROOT / "src") + os.pathsep + str(ROOT)
 
-def run(*args: str) -> None:
-    completed = subprocess.run([sys.executable, "-m", "nexora.cli", *args], cwd=ROOT, env=ENV)
-    if completed.returncode:
-        raise SystemExit(completed.returncode)
+def main():
+    print("Running phase A (Core Preparation)...")
+    subprocess.run([sys.executable, "scripts/prepare_core.py"], cwd=ROOT, env=ENV, check=True)
+    
+    print("Starting temporary backend stack for federation...")
+    backend_proc = subprocess.Popen([sys.executable, "scripts/start.py"], cwd=ROOT, env=ENV)
+    
+    try:
+        # Wait for health checks
+        manifest_path = ROOT / 'runtime/control/process.json'
+        ready = False
+        for _ in range(120):
+            if manifest_path.exists():
+                try:
+                    if json.loads(manifest_path.read_text()).get('pid'):
+                        ready = True
+                        break
+                except Exception:
+                    pass
+            time.sleep(1)
+            
+        if not ready:
+            raise RuntimeError("Temporary backend failed to start.")
+            
+        print("Running phase C (Federation Preparation)...")
+        subprocess.run([sys.executable, "scripts/prepare_federation.py"], cwd=ROOT, env=ENV, check=True)
+        
+    finally:
+        print("Stopping temporary backend stack...")
+        subprocess.run([sys.executable, "scripts/stop.py"], cwd=ROOT, env=ENV)
+        backend_proc.wait(timeout=10)
+        
+    print("Building evidence package...")
+    subprocess.run([sys.executable, "scripts/build_evidence.py"], cwd=ROOT, env=ENV, check=True)
+    
+    print("Demo preparation complete.")
 
-steps = []
-if not (ROOT / "data/synthetic/manifest.json").is_file():
-    run("data", "generate", "--profile", "demo", "--seed", "42"); steps.append("generated Synthetic data")
-else: steps.append("reused matching Synthetic data")
-for kind in ("baseline", "neural"):
-    if not (ROOT / f"models/synthetic/{kind}/metadata.json").is_file():
-        run("train", kind, "--dataset", "synthetic"); steps.append(f"trained {kind}")
-    else: steps.append(f"reused cached {kind}")
-manifests = []
-for path in (ROOT / "artifacts/runs").glob("*/manifest.json"):
-    try: manifests.append(json.loads(path.read_text()))
-    except (OSError, json.JSONDecodeError): pass
-for mode in ("federated", "private-federated"):
-    if not any(item.get("mode") == mode and item.get("status") == "completed" for item in manifests):
-        run("experiment", "run", "--mode", mode, "--dataset", "synthetic", "--rounds", "1"); steps.append(f"ran {mode}")
-    else: steps.append(f"reused completed {mode}")
-
-registry_active = ROOT / "models/registry/active.json"
-if not registry_active.exists() and (ROOT / "models/synthetic/neural/metadata.json").exists():
-    registry_active.parent.mkdir(parents=True, exist_ok=True)
-    meta = json.loads((ROOT / "models/synthetic/neural/metadata.json").read_text())
-    meta['source'] = 'synthetic'
-    meta['artifact_path'] = str(ROOT / "models/synthetic/neural")
-    registry_active.write_text(json.dumps(meta, indent=2))
-    steps.append("activated synthetic neural model")
-
-subprocess.run([sys.executable, "scripts/build_evidence.py"], cwd=ROOT, env=ENV, check=True)
-print(json.dumps({"status": "prepared", "steps": steps}, indent=2))
+if __name__ == "__main__":
+    main()

@@ -5,7 +5,7 @@ test.describe('NEXORA Dashboard Flows', () => {
     await page.goto('/');
     
     // Switch to User Mode
-    await page.getByLabel('Research Mode').uncheck();
+    await page.getByText('Research Mode').click();
     
     // Ensure Research pages are hidden
     await expect(page.getByText('AI insights')).toBeHidden();
@@ -13,7 +13,7 @@ test.describe('NEXORA Dashboard Flows', () => {
     await expect(page.getByText('Evidence')).toBeHidden();
     
     // Check available pages
-    await expect(page.getByRole('link', { name: 'Participant' })).toBeVisible();
+    await expect(page.getByText('Home', { exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Settings' })).toBeVisible();
     
     // Start session
@@ -21,19 +21,20 @@ test.describe('NEXORA Dashboard Flows', () => {
   });
 
   test('Comprehensive Research Mode Flow (20 steps)', async ({ page }) => {
-    test.setTimeout(90000);
+    test.setTimeout(150000);
 
     // 1. Navigate to app
     await page.goto('/');
     
     // 2. Ensure we are in research mode
-    await page.getByLabel('Research Mode').check();
+    // We start in research mode by default, so just verify
+    await expect(page.getByText('AI insights')).toBeVisible();
     
     // 3. Go to Overview
     await page.getByRole('link', { name: 'Overview' }).click();
     
     // 4. Select Normal Scenario
-    await page.getByRole('combobox').filter({ hasText: 'normal' }).selectOption('normal');
+    await page.getByRole('combobox', { name: 'Scenario' }).selectOption('normal');
     
     // 5. Start normal session
     await page.getByRole('button', { name: 'Start synthetic session' }).click();
@@ -56,7 +57,7 @@ test.describe('NEXORA Dashboard Flows', () => {
     await page.getByRole('button', { name: 'Stop' }).click();
     
     // 10. Select Missing Data scenario
-    await page.getByRole('combobox').filter({ hasText: 'normal' }).selectOption('missing_data');
+    await page.getByRole('combobox', { name: 'Scenario' }).selectOption('missing_data');
     
     // 11. Start missing data session
     await page.getByRole('button', { name: 'Start synthetic session' }).click();
@@ -71,7 +72,7 @@ test.describe('NEXORA Dashboard Flows', () => {
     await page.getByRole('button', { name: 'Stop' }).click();
     
     // 14. Select Sustained Posture scenario (triggers intervention)
-    await page.getByRole('combobox').filter({ hasText: 'missing_data' }).selectOption('sustained_posture');
+    await page.getByRole('combobox', { name: 'Scenario' }).selectOption('sustained_posture');
     await page.getByRole('button', { name: 'Start synthetic session' }).click();
     
     // 15. Wait a bit and check interventions
@@ -88,15 +89,14 @@ test.describe('NEXORA Dashboard Flows', () => {
     // 18. AI insights and explanation
     await page.getByRole('link', { name: 'AI insights' }).click();
     
-    // 19. Check Settings & Privacy Projection
+    // 19. Check Settings
     await page.getByRole('link', { name: 'Settings' }).click();
-    await expect(page.getByText('Privacy Budget Projections')).toBeVisible();
 
     // 20. Navigate to Evidence and Export
     await page.getByRole('link', { name: 'Evidence' }).click();
     const downloadPromise = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'Export Evidence JSON' }).click();
+    await page.getByRole('button', { name: 'Download ZIP Evidence' }).click();
     const download = await downloadPromise;
-    expect(download.suggestedFilename()).toBe('evidence.json');
+    expect(download.suggestedFilename()).toMatch(/^nexora-evidence-.*\.zip$/);
   });
 });

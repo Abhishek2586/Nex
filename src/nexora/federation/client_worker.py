@@ -27,16 +27,24 @@ def _load_ledger(path: Path):
     return json.loads(path.read_text())
 
 
-def train_client(client_id: str, base: Path, output: Path, private: bool):
+def train_client(client_id: str, base: Path, output: Path, private: bool, run_id: str, round_id: str, base_hash: str, schema_hash: str, architecture_id: str):
     torch.set_num_threads(1)
+    import hashlib
     
-    # Architecture check
-    metadata_path = base.with_name('metadata.json')
-    if metadata_path.exists():
-        from nexora.ml.train import ARCHITECTURE_ID
-        meta = json.loads(metadata_path.read_text())
-        if meta.get('architecture_id') != ARCHITECTURE_ID:
-            raise ValueError(f"Architecture mismatch in client. Expected {ARCHITECTURE_ID}, got {meta.get('architecture_id')}")
+    # 1. Base model hash validation
+    actual_base_hash = hashlib.sha256(base.read_bytes()).hexdigest()
+    if actual_base_hash != base_hash:
+        raise ValueError("base_model_hash mismatch")
+        
+    # 2. Schema hash validation
+    from nexora.features.extract import SCHEMA_HASH
+    if schema_hash != SCHEMA_HASH:
+        raise ValueError(f"Feature schema mismatch. Expected {SCHEMA_HASH}, got {schema_hash}")
+        
+    # 3. Architecture check
+    from nexora.ml.train import ARCHITECTURE_ID
+    if architecture_id != ARCHITECTURE_ID:
+        raise ValueError(f"Architecture mismatch in client. Expected {ARCHITECTURE_ID}, got {architecture_id}")
             
     model = network()
     model.load_state_dict(load_file(str(base)))
@@ -99,7 +107,18 @@ def train_client(client_id: str, base: Path, output: Path, private: bool):
     else:
         plain = model
     save_file(plain.state_dict(), str(output))
-    metadata = {"client_id": client_id, "records": len(dataset), "steps": steps, "private": private}
+    metadata = {
+        "client_id": client_id, 
+        "run_id": run_id,
+        "round_id": round_id,
+        "base_model_hash": actual_base_hash,
+        "update_hash": hashlib.sha256(output.read_bytes()).hexdigest(),
+        "feature_schema_hash": SCHEMA_HASH,
+        "architecture_id": ARCHITECTURE_ID,
+        "records": len(dataset), 
+        "steps": steps, 
+        "private": private
+    }
     if private:
         metadata["privacy"] = ledger
     output.with_suffix(".json").write_text(json.dumps(metadata, indent=2))
@@ -112,8 +131,13 @@ def main():
     parser.add_argument("--base", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--private", action="store_true")
+    parser.add_argument("--run_id", type=str, required=True)
+    parser.add_argument("--round_id", type=str, required=True)
+    parser.add_argument("--base_hash", type=str, required=True)
+    parser.add_argument("--schema_hash", type=str, required=True)
+    parser.add_argument("--architecture_id", type=str, required=True)
     args = parser.parse_args()
-    print(json.dumps(train_client(args.client, args.base, args.output, args.private)))
+    print(json.dumps(train_client(args.client, args.base, args.output, args.private, args.run_id, args.round_id, args.base_hash, args.schema_hash, args.architecture_id)))
 
 
 if __name__ == "__main__":

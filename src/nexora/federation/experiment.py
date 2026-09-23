@@ -10,7 +10,7 @@ import torch
 from safetensors.torch import load_file, save_file
 from nexora.features.extract import normalize, SCHEMA_HASH
 from nexora.federation.aggregate import fedavg, state_hash
-from nexora.ml.train import network, evaluate
+from nexora.ml.train import network, evaluate, ARCHITECTURE_ID
 
 
 def _numpy_state(path: Path):
@@ -49,10 +49,22 @@ def run(rounds=5, private=False, dataset="synthetic"):
             for c_id, url in client_urls.items():
                 output = root / f"round-{round_number}-{c_id}.safetensors"
                 headers = {'Authorization': f"Bearer {tokens.get(c_id, '')}"}
+                from nexora.ml.train import ARCHITECTURE_ID
+                base_hash = hashlib.sha256(base.read_bytes()).hexdigest()
+                payload = {
+                    'private': 'true' if private else 'false',
+                    'run_id': run_id,
+                    'round_id': str(round_number),
+                    'base_model_hash': base_hash,
+                    'feature_schema_hash': SCHEMA_HASH,
+                    'architecture_id': ARCHITECTURE_ID,
+                    'client_id': c_id
+                }
+                
                 with base.open('rb') as f:
                     resp = client.post(
                         url,
-                        data={'private': 'true' if private else 'false'},
+                        data=payload,
                         files={'base_model': (base.name, f, 'application/octet-stream')},
                         headers=headers
                     )
@@ -61,11 +73,24 @@ def run(rounds=5, private=False, dataset="synthetic"):
                 
                 output.write_bytes(resp.content)
                 outputs.append(output)
+                
+                # Check for explicit errors instead of just missing headers
+                if not resp.headers.get('X-Federation-Metadata'):
+                    raise RuntimeError(f"{c_id} failed to return metadata. Raw response: {resp.text}")
+                    
                 client_meta.append(json.loads(resp.headers.get('X-Federation-Metadata', '{}')))
 
         base_state = _numpy_state(base)
         updates = []
         for meta, path in zip(client_meta, outputs):
+            # Validate response protocol metadata
+            if meta.get("run_id") != run_id: raise RuntimeError("Client update run_id mismatch")
+            if meta.get("round_id") != str(round_number): raise RuntimeError("Client update round_id mismatch")
+            if meta.get("base_model_hash") != base_hash: raise RuntimeError("Client update base_model_hash mismatch")
+            if meta.get("feature_schema_hash") != SCHEMA_HASH: raise RuntimeError("Client update feature_schema_hash mismatch")
+            if meta.get("architecture_id") != ARCHITECTURE_ID: raise RuntimeError("Client update architecture_id mismatch")
+            if meta.get("records", 0) <= 0: raise RuntimeError("Client update has no records")
+            
             state = _numpy_state(path)
             # Validation: check shapes and hashes
             if state.keys() != base_state.keys():
@@ -73,47 +98,100 @@ def run(rounds=5, private=False, dataset="synthetic"):
             for k in state:
                 if state[k].shape != base_state[k].shape:
                     raise RuntimeError(f"Client update shape mismatch on {k}")
-            updates.append((meta["records"], state))
-        next_state = fedavg(updates)
+                if state[k].dtype != base_state[k].dtype:
+                    raise RuntimeError(f"Client update dtype mismatch on {k}")
+                if not np.isfinite(state[k]).all():
+                    raise RuntimeError(f"Client update contains non-finite values on {k}")
+                    
+            # Unique update hash check
+            u_hash = hashlib.sha256(path.read_bytes()).hexdigest()
+            if any(h == u_hash for _, _, h in updates):
+                raise RuntimeError("Duplicate update hash detected")
+                
+            updates.append((meta["records"], state, u_hash))
+            
+        # Check unique clients
+        if len(set(meta.get("client_id") for meta in client_meta)) != len(client_meta):
+            raise RuntimeError("Duplicate client ID detected")
+            
+        next_state = fedavg([(r, s) for r, s, _ in updates])
         model.load_state_dict({key: torch.from_numpy(value) for key, value in next_state.items()})
         next_path = root / f"round-{round_number}.safetensors"
         save_file(model.state_dict(), str(next_path))
         
-        # Simple protocol-level checks for schema and duplicate models
         b_hash = hashlib.sha256(base.read_bytes()).hexdigest()
         m_hash = hashlib.sha256(next_path.read_bytes()).hexdigest()
         
+        status = "completed"
+        reason = None
         if b_hash == m_hash:
-            pass # Usually would reject, but for research we might get identical hashes on first round
+            status = "no_change"
+            reason = "aggregate_identical_to_base"
             
-        history.append({
+        hist_item = {
             "round": round_number,
-            "status": "completed",
+            "status": status,
             "base_hash": b_hash,
             "model_hash": m_hash,
             "state_hash": state_hash(next_state),
             "clients": client_meta,
             "duration_s": time.time() - started,
-        })
+        }
+        if reason:
+            hist_item["reason"] = reason
+        history.append(hist_item)
         base = next_path
+        
     data_dir = Path("data/synthetic") if dataset == "synthetic" else Path(f"data/processed/{dataset}")
     manifest = json.loads((data_dir / "manifest.json").read_text())
     with np.load(data_dir / "windows.npz", allow_pickle=False) as data:
-        mask = np.isin(data["subjects"], manifest["splits"]["test"])
-        tx = torch.tensor(normalize(data["x"][mask]))
+        val_mask = np.isin(data["subjects"], manifest["splits"]["validation"])
+        test_mask = np.isin(data["subjects"], manifest["splits"]["test"])
+        
+        tx_val = torch.tensor(normalize(data["x"][val_mask]))
+        tx_test = torch.tensor(normalize(data["x"][test_mask]))
+        
         with torch.no_grad():
-            probabilities = model(tx).softmax(1).numpy()
-        metrics = evaluate(data["y"][mask], probabilities)
+            val_probabilities = model(tx_val).softmax(1).numpy()
+            test_probabilities = model(tx_test).softmax(1).numpy()
+            
+        # Threshold selection on validation split
+        from sklearn.metrics import balanced_accuracy_score
+        best_thresh = 0.5
+        best_score = -1
+        for t in np.linspace(0.1, 0.9, 81):
+            t_pred = (val_probabilities[:, 1] > t).astype(int)
+            score = balanced_accuracy_score(data["y"][val_mask], t_pred)
+            if score > best_score:
+                best_score = float(score)
+                best_thresh = float(t)
+                
+        # Evaluate on test split using selected threshold
+        metrics = evaluate(data["y"][test_mask], test_probabilities, threshold=best_thresh)
+        metrics["threshold_used"] = best_thresh
+        
+    final_model_hash = hashlib.sha256(base.read_bytes()).hexdigest()
+        
     result = {
         "run_id": run_id,
         "mode": "private-federated" if private else "federated",
         "source": "Synthetic" if dataset == "synthetic" else "Recorded dataset",
         "dataset": dataset,
         "feature_schema_hash": SCHEMA_HASH,
+        "architecture_id": ARCHITECTURE_ID,
+        "model_hash": final_model_hash,
         "rounds": history,
         "metrics": metrics,
+        "threshold": best_thresh,
+        "threshold_selection_metric": "balanced_accuracy",
+        "validation_score": best_score,
+        "validation_balanced_accuracy": best_score,
+        "test_balanced_accuracy": metrics.get("balanced_accuracy"),
+        "test_macro_f1": metrics.get("macro_f1"),
+        "selected_at": time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
         "privacy_scope": "example-level synthetic windows" if private else None,
         "status": "completed",
+        "lifecycle_state": "candidate"
     }
     (root / "manifest.json").write_text(json.dumps(result, indent=2))
     return result

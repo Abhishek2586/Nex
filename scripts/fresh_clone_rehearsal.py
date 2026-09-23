@@ -118,27 +118,6 @@ def main():
         
         failed_stage = None
         for name, cmd, cwd in stages:
-            if name == "Prepare Demo":
-                print("[Start Backend] Launching in background...")
-                backend_proc = subprocess.Popen([clone_python, "scripts/start.py"], cwd=clone_dir)
-                import time
-                manifest_path = clone_dir / 'runtime/control/process.json'
-                ready = False
-                for _ in range(180):
-                    if manifest_path.exists():
-                        try:
-                            if json.loads(manifest_path.read_text()).get('pid'):
-                                ready = True
-                                break
-                        except Exception:
-                            pass
-                    time.sleep(1)
-                if not ready:
-                    report["commands"].append({"name": "Start Backend", "exit_code": 1})
-                    failed_stage = "Start Backend"
-                    break
-                report["commands"].append({"name": "Start Backend", "exit_code": 0})
-                
             success, code = run(name, cmd, cwd)
             report["commands"].append({"name": name, "exit_code": code})
             if not success:

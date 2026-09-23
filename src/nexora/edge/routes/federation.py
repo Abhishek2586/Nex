@@ -15,9 +15,8 @@ def coordinator_request(method, path, **kwargs):
     ca_file = os.environ.get('NEXORA_CA_FILE')
     expected_token = (ROOT / 'runtime/control/tokens.json').read_text() if (ROOT / 'runtime/control/tokens.json').exists() else '{}'
     tokens = json.loads(expected_token)
-    cid = os.environ.get('NEXORA_CLIENT', 'client-a')
     headers = kwargs.pop('headers', {})
-    headers['Authorization'] = f"Bearer {tokens.get(cid, '')}"
+    headers['Authorization'] = f"Bearer {tokens.get('coordinator', '')}"
     return httpx.request(method, f'{base}{path}', verify=ca_file or True, headers=headers, **kwargs)
 
 @router.get('/metrics')
@@ -80,6 +79,26 @@ def experiment_job(job_id: str):
 def cancel_experiment_job(job_id: str):
     try: 
         response = coordinator_request('POST', f'/api/v1/experiments/{job_id}/cancel', timeout=2)
+    except httpx.HTTPError: 
+        raise HTTPException(503, 'Coordinator unavailable')
+    if response.status_code != 200: 
+        raise HTTPException(response.status_code, response.text)
+    return response.json()
+
+@router.post('/models/{run_id}/activate')
+def activate_candidate(run_id: str, body: dict):
+    try: 
+        response = coordinator_request('POST', f'/api/v1/models/{run_id}/activate', json=body, timeout=2)
+    except httpx.HTTPError: 
+        raise HTTPException(503, 'Coordinator unavailable')
+    if response.status_code != 200: 
+        raise HTTPException(response.status_code, response.text)
+    return response.json()
+
+@router.post('/models/rollback')
+def rollback_model():
+    try: 
+        response = coordinator_request('POST', '/api/v1/models/rollback', timeout=2)
     except httpx.HTTPError: 
         raise HTTPException(503, 'Coordinator unavailable')
     if response.status_code != 200: 
@@ -152,31 +171,48 @@ def privacy_projection():
     _projection_cache_key = cache_key
     return _projection_cache
 
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse
+import zipfile
+import datetime
 
 @router.get('/evidence/export')
 def export_evidence():
-    active_path = ROOT / 'models/registry/active.json'
-    history_path = ROOT / 'models/registry/history.json'
+    timestamp = datetime.datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')
+    zip_filename = f'nexora-evidence-{timestamp}.zip'
+    zip_path = ROOT / 'artifacts' / zip_filename
+    zip_path.parent.mkdir(parents=True, exist_ok=True)
     
-    evidence = {
-        "metrics": [],
-        "privacy": []
-    }
-    
-    if history_path.exists():
-        try: evidence["metrics"].extend(json.loads(history_path.read_text()))
-        except Exception: pass
-        
-    if active_path.exists():
-        try: evidence["metrics"].append(json.loads(active_path.read_text()))
-        except Exception: pass
-        
-    for path in (ROOT / 'runtime').glob('client-*/privacy.json'):
-        try: evidence["privacy"].append(json.loads(path.read_text()))
-        except Exception: pass
-        
-    return JSONResponse(content=evidence, headers={"Content-Disposition": "attachment; filename=evidence.json"})
+    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+        # active.json and history.json
+        active_path = ROOT / 'models/registry/active.json'
+        history_path = ROOT / 'models/registry/history.json'
+        if active_path.exists():
+            zf.write(active_path, arcname='registry/active.json')
+        if history_path.exists():
+            zf.write(history_path, arcname='registry/history.json')
+            
+        # Privacy ledgers
+        for path in (ROOT / 'runtime').glob('client-*/privacy.json'):
+            client_id = path.parent.name
+            zf.write(path, arcname=f'privacy/{client_id}_privacy.json')
+            
+        # Logs
+        logs_dir = ROOT / 'logs'
+        if logs_dir.exists():
+            for root_dir, _, files in os.walk(logs_dir):
+                for file in files:
+                    file_path = Path(root_dir) / file
+                    arcname = file_path.relative_to(ROOT)
+                    zf.write(file_path, arcname=str(arcname))
+                    
+        # Federated manifests
+        runs_dir = ROOT / 'artifacts/runs'
+        if runs_dir.exists():
+            for path in runs_dir.glob('*/manifest.json'):
+                run_id = path.parent.name
+                zf.write(path, arcname=f'federated_runs/{run_id}_manifest.json')
+                
+    return FileResponse(path=zip_path, filename=zip_filename, media_type='application/zip')
 
 from fastapi import File, UploadFile, Form, Header
 import uuid
@@ -187,6 +223,12 @@ from nexora.federation.client_worker import train_client
 async def train(
     base_model: UploadFile = File(...),
     private: bool = Form(False),
+    run_id: str = Form(...),
+    round_id: str = Form(...),
+    base_model_hash: str = Form(...),
+    feature_schema_hash: str = Form(...),
+    architecture_id: str = Form(...),
+    client_id: str = Form(...),
     authorization: str = Header(None)
 ):
     expected_token = (ROOT / 'runtime/control/tokens.json').read_text() if (ROOT / 'runtime/control/tokens.json').exists() else '{}'
@@ -195,7 +237,9 @@ async def train(
     
     if authorization != f"Bearer {tokens.get(cid, '')}":
         raise HTTPException(401, 'Invalid or missing service token')
-    run_id = str(uuid.uuid4())
+    if client_id != cid:
+        raise HTTPException(400, 'Client ID mismatch with service environment')
+        
     work_dir = ROOT / 'runtime' / cid / 'federation' / run_id
     work_dir.mkdir(parents=True, exist_ok=True)
     
@@ -206,7 +250,7 @@ async def train(
         shutil.copyfileobj(base_model.file, f)
         
     try:
-        metadata = train_client(cid, base_path, output_path, private)
+        metadata = train_client(cid, base_path, output_path, private, run_id, round_id, base_model_hash, feature_schema_hash, architecture_id)
     except Exception as e:
         raise HTTPException(500, f'Training failed: {str(e)}')
         

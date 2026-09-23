@@ -46,8 +46,17 @@ def test_missing_auth_on_training():
         # We need a dummy file for the upload
         import io
         files = {'base_model': ('dummy.safetensors', io.BytesIO(b'dummy content'), 'application/octet-stream')}
+        data = {
+            'private': False,
+            'run_id': 'run-1',
+            'round_id': '1',
+            'base_model_hash': 'abc',
+            'feature_schema_hash': 'def',
+            'architecture_id': 'ghi',
+            'client_id': 'client-a'
+        }
         # Missing auth header should fail with 401
-        res = c.post('/api/v1/train', files=files, data={'private': False})
+        res = c.post('/api/v1/train', files=files, data=data)
         assert res.status_code == 401
 
 def test_invalid_job_id():
