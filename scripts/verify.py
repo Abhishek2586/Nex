@@ -9,6 +9,14 @@ root = Path(__file__).resolve().parents[1]
 def get_npm():
     return 'npm.cmd' if sys.platform == 'win32' else 'npm'
 
+def get_venv_python():
+    """Return the project venv Python if it exists, otherwise sys.executable."""
+    if sys.platform == 'win32':
+        candidate = root / '.venv' / 'Scripts' / 'python.exe'
+    else:
+        candidate = root / '.venv' / 'bin' / 'python'
+    return str(candidate) if candidate.exists() else sys.executable
+
 def main():
     parser = argparse.ArgumentParser(description="NEXORA verification script")
     parser.add_argument('--full', action='store_true', help="Run full verification including E2E Playwright tests")
@@ -51,7 +59,7 @@ def main():
     if args.full and all(res == 'PASS' for res in results.values()):
         name = 'Playwright'
         print(f"Running: {name}...")
-        completed = subprocess.run([sys.executable, 'scripts/test_e2e.py'], cwd=root, env=environment)
+        completed = subprocess.run([get_venv_python(), 'scripts/test_e2e.py'], cwd=root, env=environment)
         if completed.returncode == 0:
             results[name] = 'PASS'
         else:

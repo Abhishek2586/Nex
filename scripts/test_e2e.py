@@ -8,6 +8,14 @@ from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
 
+def get_venv_python():
+    """Return the project venv Python if it exists, otherwise sys.executable."""
+    if sys.platform == 'win32':
+        candidate = root / '.venv' / 'Scripts' / 'python.exe'
+    else:
+        candidate = root / '.venv' / 'bin' / 'python'
+    return str(candidate) if candidate.exists() else sys.executable
+
 def get_npx():
     return 'npx.cmd' if sys.platform == 'win32' else 'npx'
     
@@ -34,8 +42,9 @@ def main():
     env['BASE_URL'] = f'http://127.0.0.1:{port}'
     
     # We use Popen, wait for it to be ready
+    venv_python = get_venv_python()
     backend = subprocess.Popen([
-        sys.executable, "scripts/start.py",
+        venv_python, "scripts/start.py",
         "--port", str(port),
         "--port-b", str(port_b),
         "--port-c", str(port_c),
@@ -99,7 +108,7 @@ def main():
             pass
             
     try:
-        subprocess.run([sys.executable, 'scripts/stop.py'], cwd=root, check=True)
+        subprocess.run([venv_python, 'scripts/stop.py'], cwd=root, check=True)
         cleanup_result = "SUCCESS"
     except Exception as e:
         cleanup_result = f"FAIL: {e}"
