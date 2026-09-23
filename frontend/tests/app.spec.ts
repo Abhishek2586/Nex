@@ -42,11 +42,13 @@ test.describe('NEXORA Dashboard Flows', () => {
     
     // Stop session
     await page.getByRole('link', { name: 'Overview' }).click();
+    await expect(page.locator('.status').filter({ hasText: /running|stopped/ })).toBeVisible({ timeout: 15000 });
+    
     const stopBtn = page.getByRole('button', { name: 'Stop' });
-    await stopBtn.waitFor({ state: 'visible', timeout: 15000 });
     if (await stopBtn.isEnabled()) {
         await stopBtn.click();
     }
+    await expect(stopBtn).toBeDisabled({ timeout: 10000 });
   });
 
   test('3. Research Mode: Missing Data Scenario', async ({ page }) => {
@@ -63,11 +65,13 @@ test.describe('NEXORA Dashboard Flows', () => {
     
     // Stop session
     await page.getByRole('link', { name: 'Overview' }).click();
+    await expect(page.locator('.status').filter({ hasText: /running|stopped/ })).toBeVisible({ timeout: 15000 });
+    
     const stopBtn2 = page.getByRole('button', { name: 'Stop' });
-    await stopBtn2.waitFor({ state: 'visible', timeout: 15000 });
     if (await stopBtn2.isEnabled()) {
         await stopBtn2.click();
     }
+    await expect(stopBtn2).toBeDisabled({ timeout: 10000 });
   });
 
   test('4. Research Mode: Interventions & Prompt Isolation', async ({ page }) => {
@@ -78,20 +82,26 @@ test.describe('NEXORA Dashboard Flows', () => {
     await page.getByRole('combobox', { name: 'Scenario' }).selectOption('sustained_posture');
     await page.getByRole('button', { name: 'Start synthetic session' }).click();
     
+    // Wait for session to actually start
+    const stopBtn = page.getByRole('button', { name: 'Stop' });
+    await expect(stopBtn).toBeEnabled({ timeout: 15000 });
+    
     await page.getByRole('link', { name: 'Interventions' }).click();
     await expect(page.getByText('Prompts & feedback')).toBeVisible();
-    await expect(page.getByText('Physical output not connected.').first()).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('Physical output not connected.').first()).toBeVisible({ timeout: 30000 });
     
     // Check prompt isolation: go back, stop, start a new session (normal), ensure prompt doesn't bleed over
     await page.getByRole('link', { name: 'Overview' }).click();
-    const stopBtn3 = page.getByRole('button', { name: 'Stop' });
-    await stopBtn3.waitFor({ state: 'visible', timeout: 15000 });
-    if (await stopBtn3.isEnabled()) {
-        await stopBtn3.click();
+    await expect(page.locator('.status').filter({ hasText: /running|stopped/ })).toBeVisible({ timeout: 15000 });
+    
+    if (await stopBtn.isEnabled()) {
+        await stopBtn.click();
     }
+    await expect(stopBtn).toBeDisabled({ timeout: 10000 });
     
     await page.getByRole('combobox', { name: 'Scenario' }).selectOption('normal');
     await page.getByRole('button', { name: 'Start synthetic session' }).click();
+    await expect(stopBtn).toBeEnabled({ timeout: 15000 });
     
     // Check user guidance page (should have no active prompts for normal)
     await page.getByText('Research Mode').click(); // switch to user
@@ -100,6 +110,7 @@ test.describe('NEXORA Dashboard Flows', () => {
     
     await page.getByRole('link', { name: 'Home' }).click();
     await page.getByRole('button', { name: 'End session' }).click();
+    await expect(page.getByRole('button', { name: 'End session' })).toBeHidden({ timeout: 10000 });
   });
 
   test('5. AI Insights & Explanations', async ({ page }) => {

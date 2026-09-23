@@ -40,7 +40,7 @@ Started: 2026-09-18.
 |---|---|---|
 | Startup/Shutdown Robustness | PASS | 10048 WinErrors fixed; proper psutil process tree ownership. |
 | Single Instance Locks | PASS | `process.json` checks and port preflights implemented. |
-| Fresh Clone Rehearsal | PASS | Genuine out-of-tree git clone and isolated `.venv` verified. |
+| Fresh Clone Rehearsal | PASS | Genuine out-of-tree git clone and isolated `.venv` verified. E2E flaky race conditions in fresh clone resolved. |
 | Architecture Validation | PASS | Predictor rejects mismatched architecture_id at load time. |
 | Threshold Safety | PASS | Missing threshold returns `no_action` with reason `missing_active_model_threshold`. |
 | Dynamic Threshold Selection | PASS | Threshold selected on validation split only; test split not touched during selection. |
@@ -63,6 +63,7 @@ Started: 2026-09-18.
 ## Completed cleanup (2026-09-23)
 - CI fixed: flake8 F401/F402 errors resolved; strict `pip install -e .[dev]` (no fallback); `npm ci` (no fallback); lint runs before tests.
 - CI step ordering corrected: lint → mypy → bootstrap → prepare_core → doctor → backend tests → frontend → E2E → evidence.
+- E2E tests hardened against race conditions: Tests now wait for session status to reach 'running'/'stopped' before attempting to click the Stop button, preventing browser connection exhaustion from orphaned background sessions.
 - Evidence ZIP unified: single canonical `src/nexora/evidence/builder.py` used by both `build_evidence.py` and edge `/evidence/export`.
 - Input validation added to `/train`: UUID4 run_id, integer round_id (1–10), 50MB upload limit.
 - Federation activation fixed: always uses final validated round, not round 1 default.
