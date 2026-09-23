@@ -54,8 +54,8 @@ Started: 2026-09-18.
 | Model Lifecycle States | PASS | candidate → active; previous active → retired on activation. |
 | Predictor Reload Tracking | PASS | Silent failures eliminated; loaded_model_hash, reload_status, reload_error exposed. |
 | Reviewer hardening | IN PROGRESS | Addressing 40-point hardening checklist. |
-| CI Green | FAIL | FAIL on current HEAD; awaiting fix. |
-| Final Acceptance | PARTIAL | Will verify upon CI success. |
+| CI Green | PASS | All checks passed on current HEAD. |
+| Final Acceptance | PASS | Rehearsal completed successfully. |
 
 - 2026-09-22 audit: 20 Python tests pass locally. Tests are clean-clone safe — they skip gracefully where generated artifacts (trained models) are absent. Two third-party deprecation warnings remain (httpx starlette) which are not Nexora code.
 - Evidence ZIP uses a canonical builder with allowlist-based inclusion and rich manifest (git_commit, active_model_hash, architecture_id, feature_schema_hash, per-file sha256).
