@@ -56,6 +56,16 @@ def _execute(job):
     try: result=json.loads(stdout)
     except json.JSONDecodeError:
         current.update(status='failed',finished_at=time.time(),error='Experiment returned invalid output'); _save(current); return
+    # Mark the run manifest with lifecycle=candidate and protocol_version (Tasks 5, 9)
+    run_manifest_path = ROOT / 'artifacts' / 'runs' / result.get('run_id', '') / 'manifest.json'
+    if run_manifest_path.exists():
+        try:
+            manifest = json.loads(run_manifest_path.read_text())
+            manifest['lifecycle_state'] = 'candidate'
+            manifest['protocol_version'] = 'nexora-fed-v1'
+            run_manifest_path.write_text(json.dumps(manifest, indent=2))
+        except Exception:
+            pass
     current.update(status='completed',finished_at=time.time(),run_id=result['run_id'],result=result); _save(current)
 
 @app.get("/health")
@@ -95,22 +105,27 @@ def cancel(job_id:str):
 
 @app.post('/api/v1/models/{run_id}/activate', dependencies=[Depends(verify_token)])
 def activate_model(run_id: str, body: dict | None = None):
-    # 'body' might optionally contain 'round'. If not, default to the last round.
-    round_number = body.get('round', 1) if body else 1
+    """Only the FINAL validated round is activation-eligible (Task 8)."""
     run_path = ROOT / 'artifacts' / 'runs' / run_id
     if not run_path.exists(): raise HTTPException(404, 'Run not found')
     manifest = json.loads((run_path / 'manifest.json').read_text())
-    
-    # Validation checks
-    if len(manifest['rounds']) < round_number: raise HTTPException(422, 'Round not found in run')
-    round_meta = manifest['rounds'][round_number - 1]
-    
+
+    # Task 8: Always use the final round — ignore any round field in body
+    # Rounds without a 'status' key are treated as completed (backward compatible with existing manifests).
+    completed_rounds = [
+        r for r in manifest.get('rounds', [])
+        if r.get('status', 'completed') in ('completed', 'no_change')
+    ]
+    if not completed_rounds: raise HTTPException(422, 'No completed rounds in run')
+    round_number = len(manifest.get('rounds', []))  # final round index (1-based, counts all rounds)
+    round_meta = manifest['rounds'][-1]  # always the last round in the manifest
+
     safetensor_path = run_path / f"round-{round_number}.safetensors"
-    if not safetensor_path.exists(): raise HTTPException(404, 'Model weights missing')
-    
+    if not safetensor_path.exists(): raise HTTPException(404, 'Final round model weights missing')
+
     b_hash = hashlib.sha256(safetensor_path.read_bytes()).hexdigest()
-    if b_hash != round_meta['model_hash']: raise HTTPException(400, 'Model hash mismatch validation failed')
-    
+    if b_hash != round_meta['model_hash']: raise HTTPException(400, 'Model hash mismatch — weights do not match manifest')
+
     # Ensure candidate has required metadata from the run manifest
     if 'threshold' not in manifest: raise HTTPException(400, 'Threshold missing from candidate metadata')
     if 'validation_score' not in manifest: raise HTTPException(400, 'Validation score missing from candidate metadata')
@@ -119,10 +134,10 @@ def activate_model(run_id: str, body: dict | None = None):
 
     from nexora.ml.train import ARCHITECTURE_ID
     if manifest['architecture_id'] != ARCHITECTURE_ID: raise HTTPException(400, 'Architecture mismatch')
-    
+
     registry_dir = ROOT / 'models' / 'registry'
     registry_dir.mkdir(parents=True, exist_ok=True)
-    
+
     meta = {
         'source': manifest.get('dataset', 'synthetic'),
         'model_id': 'neural',
@@ -131,23 +146,31 @@ def activate_model(run_id: str, body: dict | None = None):
         'model_hash': round_meta['model_hash'],
         'feature_schema_hash': manifest['feature_schema_hash'],
         'architecture_id': manifest['architecture_id'],
+        'protocol_version': manifest.get('protocol_version', 'nexora-fed-v1'),
         'artifact_path': str(safetensor_path),
         'metrics': manifest.get('metrics', {}),
         'threshold': manifest['threshold'],
         'threshold_selection_metric': manifest.get('threshold_selection_metric', 'balanced_accuracy'),
         'validation_score': manifest['validation_score'],
         'activated_at': time.time(),
-        'lifecycle_state': 'active'
+        'lifecycle_state': 'active'  # Task 9: candidate -> active
     }
-    
-    # Save history if active exists
+
+    # Task 9: Previous active model becomes 'retired' (not just appended to history)
     active_path = registry_dir / 'active.json'
     if active_path.exists():
         history_path = registry_dir / 'history.json'
         history = json.loads(history_path.read_text()) if history_path.exists() else []
-        history.append(json.loads(active_path.read_text()))
+        prev = json.loads(active_path.read_text())
+        prev['lifecycle_state'] = 'retired'
+        prev['retired_at'] = time.time()
+        history.append(prev)
         history_path.write_text(json.dumps(history, indent=2))
-        
+
+    # Task 9: Also update the run manifest lifecycle_state to active
+    manifest['lifecycle_state'] = 'active'
+    (run_path / 'manifest.json').write_text(json.dumps(manifest, indent=2))
+
     active_path.write_text(json.dumps(meta, indent=2))
     return meta
 

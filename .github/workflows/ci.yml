@@ -33,6 +33,19 @@ jobs:
     - name: Run typecheck (mypy)
       run: mypy src/nexora --ignore-missing-imports
 
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install frontend dependencies
+      working-directory: ./frontend
+      run: npm ci
+
+    - name: Build Frontend
+      working-directory: ./frontend
+      run: npm run build
+
     - name: Bootstrap (generate tokens and runtime dirs)
       run: python scripts/bootstrap.py
 
@@ -47,24 +60,9 @@ jobs:
         mkdir -p /tmp/nexora-pytest-tmp reports
         pytest tests/ -v --junitxml=reports/pytest.xml --basetemp=/tmp/nexora-pytest-tmp
 
-
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-
-    - name: Install frontend dependencies
-      working-directory: ./frontend
-      run: npm ci
-
-    - name: Build Frontend
-      working-directory: ./frontend
-      run: npm run build
-
     - name: Run Frontend Tests
       working-directory: ./frontend
       run: npm run test
-
 
     - name: Install Playwright browsers
       working-directory: ./frontend

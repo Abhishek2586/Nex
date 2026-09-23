@@ -1,7 +1,6 @@
 import os
+import re
 import json
-import shutil
-import zipfile
 import datetime
 import httpx
 from fastapi import APIRouter, HTTPException, File, UploadFile, Form, Header
@@ -178,42 +177,46 @@ def privacy_projection():
 
 @router.get('/evidence/export')
 def export_evidence():
+    """Task 14: Delegate to canonical evidence builder (same format as build_evidence.py)."""
+    from nexora.evidence.builder import build_evidence_package
     timestamp = datetime.datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')
     zip_filename = f'nexora-evidence-{timestamp}.zip'
     zip_path = ROOT / 'artifacts' / zip_filename
-    zip_path.parent.mkdir(parents=True, exist_ok=True)
-    
-    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
-        # active.json and history.json
-        active_path = ROOT / 'models/registry/active.json'
-        history_path = ROOT / 'models/registry/history.json'
-        if active_path.exists():
-            zf.write(active_path, arcname='registry/active.json')
-        if history_path.exists():
-            zf.write(history_path, arcname='registry/history.json')
-            
-        # Privacy ledgers
-        for path in (ROOT / 'runtime').glob('client-*/privacy.json'):
-            client_id = path.parent.name
-            zf.write(path, arcname=f'privacy/{client_id}_privacy.json')
-            
-        # Logs
-        logs_dir = ROOT / 'logs'
-        if logs_dir.exists():
-            for root_dir, _, files in os.walk(logs_dir):
-                for file in files:
-                    file_path = Path(root_dir) / file
-                    arcname = file_path.relative_to(ROOT)
-                    zf.write(file_path, arcname=str(arcname))
-                    
-        # Federated manifests
-        runs_dir = ROOT / 'artifacts/runs'
-        if runs_dir.exists():
-            for path in runs_dir.glob('*/manifest.json'):
-                run_id = path.parent.name
-                zf.write(path, arcname=f'federated_runs/{run_id}_manifest.json')
-                
+    build_evidence_package(ROOT, zip_path)
     return FileResponse(path=zip_path, filename=zip_filename, media_type='application/zip')
+
+
+@router.get('/models/active')
+def get_active_model():
+    """Task 10: Dedicated endpoint - frontend uses this to get the active model without inference."""
+    target_meta = ROOT / 'models' / 'registry' / 'active.json'
+    if not target_meta.exists():
+        raise HTTPException(404, 'No active model')
+    from nexora.edge.inference import get_reload_state
+    meta = json.loads(target_meta.read_text())
+    reload_state = get_reload_state()
+    meta['reload_state'] = reload_state
+    return meta
+
+
+_MAX_UPLOAD_BYTES = 50 * 1024 * 1024  # 50 MB hard limit on uploaded model
+
+
+def _validate_run_id(run_id: str) -> None:
+    """Validate run_id is UUID4 with no path traversal (Task 7)."""
+    if not re.fullmatch(r'[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}', run_id):
+        raise HTTPException(400, 'run_id must be a valid UUID4')
+
+
+def _validate_round_id(round_id: str) -> int:
+    """Validate round_id is an integer 1-10 (Task 7)."""
+    try:
+        r = int(round_id)
+    except (ValueError, TypeError):
+        raise HTTPException(400, 'round_id must be an integer')
+    if r < 1 or r > 10:
+        raise HTTPException(400, 'round_id must be between 1 and 10')
+    return r
 
 
 @router.post('/train')
@@ -231,29 +234,36 @@ async def train(
     expected_token = (ROOT / 'runtime/control/tokens.json').read_text() if (ROOT / 'runtime/control/tokens.json').exists() else '{}'
     tokens = json.loads(expected_token)
     cid = os.environ.get('NEXORA_CLIENT', 'client-a')
-    
+
     if authorization != f"Bearer {tokens.get(cid, '')}":
         raise HTTPException(401, 'Invalid or missing service token')
     if client_id != cid:
         raise HTTPException(400, 'Client ID mismatch with service environment')
-        
+
+    # Validate inputs before touching the filesystem (Task 7)
+    _validate_run_id(run_id)
+    validated_round = _validate_round_id(round_id)
+
     work_dir = ROOT / 'runtime' / cid / 'federation' / run_id
     work_dir.mkdir(parents=True, exist_ok=True)
-    
+
     base_path = work_dir / 'base.safetensors'
     output_path = work_dir / 'output.safetensors'
-    
-    with base_path.open('wb') as f:
-        shutil.copyfileobj(base_model.file, f)
-        
+
+    # Enforce upload size limit before writing to disk (Task 7)
+    content_bytes = await base_model.read()
+    if len(content_bytes) > _MAX_UPLOAD_BYTES:
+        raise HTTPException(413, f'Base model upload exceeds {_MAX_UPLOAD_BYTES // 1024 // 1024} MB limit')
+    base_path.write_bytes(content_bytes)
+
     try:
-        metadata = train_client(cid, base_path, output_path, private, run_id, round_id, base_model_hash, feature_schema_hash, architecture_id)
+        metadata = train_client(cid, base_path, output_path, private, run_id, str(validated_round), base_model_hash, feature_schema_hash, architecture_id)
     except Exception as e:
         raise HTTPException(500, f'Training failed: {str(e)}')
-        
+
     if not output_path.exists():
         raise HTTPException(500, 'Output model missing')
-        
+
     # Return the metadata and the trained model file
     response = FileResponse(path=output_path, media_type='application/octet-stream')
     response.headers['X-Federation-Metadata'] = json.dumps(metadata)

@@ -6,7 +6,7 @@ modules=['fastapi','uvicorn','sqlalchemy','numpy','scipy','pandas','sklearn','to
 report={
     'platform':platform.platform(), 'python':sys.version.split()[0],
     'node':subprocess.run(['node','--version'],capture_output=True,text=True).stdout.strip(),
-    'npm':subprocess.run(['npm.cmd','--version'],capture_output=True,text=True).stdout.strip(),
+    'npm':subprocess.run(['npm.cmd' if sys.platform == 'win32' else 'npm','--version'],capture_output=True,text=True).stdout.strip(),
     'disk_free_gb':round(shutil.disk_usage(root).free/1024**3,2),
     'imports':{name:importlib.util.find_spec(name) is not None for name in modules},
     'frontend_built':(root/'frontend/dist/index.html').exists(),

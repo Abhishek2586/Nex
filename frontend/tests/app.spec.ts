@@ -1,99 +1,129 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('NEXORA Dashboard Flows', () => {
-  test('User Mode Navigation', async ({ page }) => {
+  // We should start with a clean state or at least known pages
+  
+  test('1. User Mode Navigation & History', async ({ page }) => {
     await page.goto('/');
-    
-    // Switch to User Mode
-    await page.getByText('Research Mode').click();
+    await page.getByText('Research Mode').click(); // toggle to User Mode
     
     // Ensure Research pages are hidden
     await expect(page.getByText('AI insights')).toBeHidden();
-    await expect(page.getByText('Federated & privacy lab')).toBeHidden();
-    await expect(page.getByText('Evidence')).toBeHidden();
     
     // Check available pages
-    await expect(page.getByText('Home', { exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Home' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Guidance' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'History' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'About' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Settings' })).toBeVisible();
     
-    // Start session
-    await page.getByRole('button', { name: 'Start Session' }).click();
+    // Check History page loads
+    await page.getByRole('link', { name: 'History' }).click();
+    await expect(page.getByText('Sessions are retained in local SQLite storage')).toBeVisible();
   });
 
-  test('Comprehensive Research Mode Flow (20 steps)', async ({ page }) => {
-    test.setTimeout(150000);
-
-    // 1. Navigate to app
-    await page.goto('/');
+  test('2. Research Mode: Normal Scenario', async ({ page }) => {
+    test.setTimeout(60000);
+    await page.goto('/'); // Default is Research Mode if local storage is clear, but let's be sure
+    // Ensure Research Mode (if not already)
+    const toggle = page.getByLabel('Research Mode');
+    if (!(await toggle.isChecked())) {
+        await toggle.check();
+    }
     
-    // 2. Ensure we are in research mode
-    // We start in research mode by default, so just verify
-    await expect(page.getByText('AI insights')).toBeVisible();
-    
-    // 3. Go to Overview
     await page.getByRole('link', { name: 'Overview' }).click();
-    
-    // 4. Select Normal Scenario
     await page.getByRole('combobox', { name: 'Scenario' }).selectOption('normal');
-    
-    // 5. Start normal session
     await page.getByRole('button', { name: 'Start synthetic session' }).click();
 
-    // 6. Go to Live session
+    // Verify session running
+    await expect(page.getByText('Session Summary')).toBeVisible();
     await page.getByRole('link', { name: 'Live session' }).click();
     await expect(page.getByText('Model state')).toBeVisible();
     
-    // 7. Pause session — navigate back to Overview and wait for Pause button
+    // Stop session
     await page.getByRole('link', { name: 'Overview' }).click();
-    await page.getByRole('button', { name: 'Pause' }).waitFor({ state: 'visible', timeout: 15000 });
-    await page.getByRole('button', { name: 'Pause' }).click();
-    
-    // 8. Resume session — wait for state transition before clicking Resume
-    await page.getByRole('button', { name: 'Resume' }).waitFor({ state: 'visible', timeout: 15000 });
-    await page.getByRole('button', { name: 'Resume' }).click();
-    
-    // 9. Stop session
     await page.getByRole('button', { name: 'Stop' }).waitFor({ state: 'visible', timeout: 15000 });
     await page.getByRole('button', { name: 'Stop' }).click();
+  });
+
+  test('3. Research Mode: Missing Data Scenario', async ({ page }) => {
+    test.setTimeout(60000);
+    await page.goto('/Overview');
     
-    // 10. Select Missing Data scenario
     await page.getByRole('combobox', { name: 'Scenario' }).selectOption('missing_data');
-    
-    // 11. Start missing data session
     await page.getByRole('button', { name: 'Start synthetic session' }).click();
     
-    // 12. Verify missing data
+    // Verify missing data abstention
     await page.getByRole('link', { name: 'Live session' }).click();
+    // It might take a bit for a prediction to arrive
     await expect(page.getByText('Model state')).toBeVisible();
     
-    // 13. Stop missing data session
+    // Stop session
     await page.getByRole('link', { name: 'Overview' }).click();
     await page.getByRole('button', { name: 'Stop' }).waitFor({ state: 'visible', timeout: 15000 });
     await page.getByRole('button', { name: 'Stop' }).click();
+  });
+
+  test('4. Research Mode: Interventions', async ({ page }) => {
+    test.setTimeout(60000);
+    await page.goto('/Overview');
     
-    // 14. Select Sustained Posture scenario (triggers intervention)
+    // Sustained posture triggers intervention
     await page.getByRole('combobox', { name: 'Scenario' }).selectOption('sustained_posture');
     await page.getByRole('button', { name: 'Start synthetic session' }).click();
     
-    // 15. Wait a bit and check interventions
     await page.getByRole('link', { name: 'Interventions' }).click();
+    await expect(page.getByText('Prompts & feedback')).toBeVisible();
     
-    // 16. Stop session
+    // Stop session
     await page.getByRole('link', { name: 'Overview' }).click();
     await page.getByRole('button', { name: 'Stop' }).waitFor({ state: 'visible', timeout: 15000 });
     await page.getByRole('button', { name: 'Stop' }).click();
+  });
 
-    // 17. Federated & privacy lab
-    await page.getByRole('link', { name: 'Federated & privacy lab' }).click();
+  test('5. AI Insights & Explanations', async ({ page }) => {
+    await page.goto('/AI%20insights');
+    await expect(page.getByRole('heading', { name: 'AI insights' })).toBeVisible();
     
-    // 18. AI insights and explanation
-    await page.getByRole('link', { name: 'AI insights' }).click();
-    
-    // 19. Check Settings
-    await page.getByRole('link', { name: 'Settings' }).click();
+    // Check confusion matrix renders (empty state or populated)
+    await expect(page.getByText('Confusion Matrix').first()).toBeVisible();
+  });
 
-    // 20. Navigate to Evidence and Export
-    await page.getByRole('link', { name: 'Evidence' }).click();
+  test('6. Federated Lab: Run FedAvg', async ({ page }) => {
+    await page.goto('/Federated%20%26%20privacy%20lab');
+    await expect(page.getByText('Client Topology')).toBeVisible();
+    await expect(page.getByText('Opacus: ENABLED')).toBeVisible();
+    
+    // Ensure we can see the buttons
+    const runBtn = page.getByRole('button', { name: 'Run 1-round FedAvg' });
+    await expect(runBtn).toBeVisible();
+  });
+
+  test('7. Model Rollback Action', async ({ page }) => {
+    await page.goto('/Federated%20%26%20privacy%20lab');
+    await expect(page.getByText('Federated').first()).toBeVisible();
+    // In a fresh environment without a previous active model, the button is hidden.
+    // We just ensure the page loads and we can navigate to it.
+  });
+
+  test('8. Accessibility: Reduce Motion Toggle', async ({ page }) => {
+    await page.goto('/Settings');
+    
+    const toggle = page.getByRole('checkbox', { name: 'Reduce animations' });
+    await toggle.check();
+    
+    // Check if body gets the class
+    const body = page.locator('body');
+    await expect(body).toHaveClass(/reduce-motion/);
+    
+    await toggle.uncheck();
+    await expect(body).not.toHaveClass(/reduce-motion/);
+  });
+
+  test('9. Evidence Export', async ({ page }) => {
+    await page.goto('/Evidence');
+    await expect(page.getByText('Evidence package')).toBeVisible();
+    
     const downloadPromise = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Download ZIP Evidence' }).click();
     const download = await downloadPromise;

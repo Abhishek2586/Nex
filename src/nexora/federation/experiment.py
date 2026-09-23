@@ -23,6 +23,9 @@ def run(rounds=5, private=False, dataset="synthetic"):
     root = Path("artifacts/runs") / run_id
     root.mkdir(parents=True, exist_ok=True)
     torch.manual_seed(42 if not private else int.from_bytes(os.urandom(8), "big"))
+    # Task 13: Federation explicitly uses random initialization as the round-0 base.
+    # This trains a fresh global candidate rather than adapting the current active model.
+    # Design choice: fresh random init for federation, documented in manifest as base_model_source.
     model = network()
     base = root / "round-0.safetensors"
     save_file(model.state_dict(), str(base))
@@ -102,13 +105,19 @@ def run(rounds=5, private=False, dataset="synthetic"):
                 if not np.isfinite(state[k]).all():
                     raise RuntimeError(f"Client update contains non-finite values on {k}")
                     
-            # Unique update hash check
+            # Task 6: Verify update_hash matches actual received bytes
             u_hash = hashlib.sha256(path.read_bytes()).hexdigest()
+            if meta.get("update_hash") and meta["update_hash"] != u_hash:
+                raise RuntimeError(f"Update hash mismatch for {c_id}: manifest={meta['update_hash'][:8]} actual={u_hash[:8]}")
+            # Task 6: Verify response client_id matches the URL/identity we sent to
+            if meta.get("client_id") != c_id:
+                raise RuntimeError(f"Client ID binding mismatch: sent to {c_id} but response claims {meta.get('client_id')}")
+            # Unique update hash check
             if any(h == u_hash for _, _, h in updates):
                 raise RuntimeError("Duplicate update hash detected")
-                
+
             updates.append((meta["records"], state, u_hash))
-            
+
         # Check unique clients
         if len(set(meta.get("client_id") for meta in client_meta)) != len(client_meta):
             raise RuntimeError("Duplicate client ID detected")
@@ -190,7 +199,10 @@ def run(rounds=5, private=False, dataset="synthetic"):
         "selected_at": time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
         "privacy_scope": "example-level synthetic windows" if private else None,
         "status": "completed",
-        "lifecycle_state": "candidate"
+        "lifecycle_state": "candidate",
+        "protocol_version": "nexora-fed-v1",
+        "base_model_source": "random_init",
+        "base_model_note": "Federation trains a fresh global candidate from random initialization, not the current active model."
     }
     (root / "manifest.json").write_text(json.dumps(result, indent=2))
     return result

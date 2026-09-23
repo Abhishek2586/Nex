@@ -214,3 +214,11 @@ footer { font-size: 12px; font-weight: 500; color: var(--text-muted); text-align
   .controls { align-items: stretch; }
   .controls label, .controls button { width: 100%; }
 }
+
+/* Task 19: Reduce motion accessibility */
+body.reduce-motion * {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}

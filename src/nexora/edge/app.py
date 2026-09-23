@@ -48,6 +48,18 @@ app.include_router(interventions.router, prefix='/api/v1')
 app.include_router(explanations.router, prefix='/api/v1')
 app.include_router(federation.router, prefix='/api/v1')
 
+class SPAStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope):
+        from starlette.exceptions import HTTPException as StarletteHTTPException
+        try:
+            return await super().get_response(path, scope)
+        except StarletteHTTPException as ex:
+            if ex.status_code == 404:
+                return await super().get_response("index.html", scope)
+            raise ex
+        except Exception as ex:
+            raise ex
+
 if (ROOT / 'frontend/dist').exists():
-    app.mount('/', StaticFiles(directory=ROOT / 'frontend/dist', html=True), name='dashboard')
+    app.mount('/', SPAStaticFiles(directory=ROOT / 'frontend/dist', html=True), name='dashboard')
 
