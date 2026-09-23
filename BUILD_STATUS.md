@@ -51,7 +51,7 @@ Started: 2026-09-18.
 | Rollback Success Path | PASS | Full A→B→rollback→A cycle tested; inference on restored model verified. |
 | Reviewer hardening | PASS | All items verified: flake8 clean, mypy clean, tests 19/19 pass locally, Playwright 2/2 pass. |
 | CI Green | PASS | GitHub Actions f2053ef: 19/19 pytest pass (clean-clone safe), frontend build pass, lint pass. |
-| Final Acceptance | PASS | CI-reproducible: verify.py --full PASS (Backend, Frontend build, Frontend unit, Evidence, Playwright). |
+| Final Acceptance | PASS | verify.py --full PASS: Backend 19/19, Frontend build, Frontend unit, Evidence build, Playwright 2/2. |
 
 - 2026-09-22 audit: 19 Python tests pass (19/19 locally and on CI). Tests are now clean-clone safe — they skip gracefully where generated artifacts (trained models) are absent rather than failing. Two third-party deprecation warnings remain (httpx starlette) which are not Nexora code.
 - Evidence ZIP is checksum-indexed and excludes SQLite state, secrets, keys, raw recordings and dependency directories. Its manifest records the current archive checksum and included-file checksums.
@@ -60,9 +60,14 @@ Started: 2026-09-18.
 Final consistency and reproducibility cleanup complete:
 - Committed test artifacts (temp_pytest/, temporary pickles and safetensors) removed from git history and covered by .gitignore.
 - Unused scratch scripts relocated to scripts/experiments/ with portable paths (no hardcoded d:/Downloads).
-- BUILD_STATUS contradictions resolved: manual feedback policy-only wording, WESAD adapter vs real WESAD explicitly separated.
+- BUILD_STATUS.md contradictions resolved: manual feedback policy-only wording, WESAD adapter vs real WESAD explicitly separated.
 - CI tests made clean-clone safe: test_api.py no longer requires a trained model; test_explanations.py skips if baseline model absent.
 - GitHub Actions CI is now green on commit f2053ef.
+- Missing spec-required scripts added: bootstrap.ps1, bootstrap.sh, start.ps1, start.sh.
+- Missing docs/PATENT_AGENT_REVIEW_NOTES.md created.
+- FINAL_HANDOFF.md updated with exam-day 3-step checklist and evidence path table.
+- Playwright E2E failure fixed: test_e2e.py and verify.py now use the project venv Python for start.py/stop.py.
+- verify.py --full PASS (2026-09-23): Backend 19/19, Frontend build, Frontend unit, Evidence build, Playwright 2/2.
 
 ## Not yet verified
 Real WESAD evaluation is not verified because the dataset is not supplied.
