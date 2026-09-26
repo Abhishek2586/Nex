@@ -6,7 +6,7 @@ export function Evidence({ health, models, activeModel }: any) {
   return (
     <div className="card">
       <h2>Evidence package</h2>
-      {health.wesad && health.wesad.status === 'COMPLETED' ? (
+      {health.wesad && (health.wesad.centralized_status === 'COMPLETED' || health.wesad.import_status === 'COMPLETED') ? (
         <div style={{ background: 'var(--surface)', borderRadius: '0.5rem', padding: '1rem', marginBottom: '1rem' }}>
           <p><strong>WESAD offline evaluation:</strong> COMPLETED</p>
           <p><strong>Imported subjects:</strong> {health.wesad.subject_count}</p>

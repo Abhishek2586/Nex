@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '../api/client';
 import { Row } from '../types';
 
@@ -13,8 +13,11 @@ export function useNexoraData(selected: string) {
   const [privacy, V] = useState<Row[]>([]);
   const [projections, PROJ] = useState<Row[]>([]);
   const [error, ERR] = useState('');
+  const refreshing = useRef(false);
 
   const refresh = async () => {
+    if (refreshing.current) return;
+    refreshing.current = true;
     try {
       const [h, s, p, m, am, r, v, proj, dstat] = await Promise.all([
         api('health'),
@@ -36,6 +39,8 @@ export function useNexoraData(selected: string) {
     } catch (e) {
       ERR(String(e));
       H({ status: 'disconnected' });
+    } finally {
+      refreshing.current = false;
     }
   };
 

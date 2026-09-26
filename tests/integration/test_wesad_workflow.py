@@ -56,11 +56,20 @@ def test_wesad_client_worker_does_not_read_synthetic(tmp_path):
     manifest = json.loads((data_dir / "manifest.json").read_text())
     assert d_hash == manifest["windows_sha256"]
     
-def test_wesad_private_ledger(tmp_path):
+def test_wesad_private_ledger(tmp_path, monkeypatch):
     data_dir = Path("data/processed/wesad")
     if not (data_dir / "manifest.json").exists():
         pytest.skip("WESAD not imported")
         
+    import nexora.federation.client_worker as cw
+    
+    def mock_path(*args, **kwargs):
+        if args and args[0] == "runtime":
+            return tmp_path / "runtime"
+        return Path(*args, **kwargs)
+        
+    monkeypatch.setattr(cw, "Path", mock_path)
+    
     from nexora.federation.client_worker import train_client
     import torch
     from nexora.ml.train import network

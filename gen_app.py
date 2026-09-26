@@ -1,4 +1,10 @@
-import React, { useState } from 'react';
+import os
+from pathlib import Path
+
+root = Path("frontend/src")
+
+files = {
+    "app/App.tsx": """import React, { useState } from 'react';
 import { BrowserRouter, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { useNexoraData } from '../hooks/useNexoraData';
@@ -25,7 +31,7 @@ export function App() {
   const [speed, SP] = useState(20);
   const [mode, setMode] = useState(() => localStorage.getItem('nexora-view') || 'research');
   
-  const { health, sessions, prompts, models, activeModel, runs, jobs, privacy, error, ERR, refresh, S } = useNexoraData(selected);
+  const { health, sessions, prompts, models, activeModel, runs, jobs, privacy, error, catalog, ERR, refresh, S } = useNexoraData(selected);
   const { events, E } = useSessionEvents(selected, ERR);
 
   const navigate = useNavigate();
@@ -52,8 +58,6 @@ export function App() {
   const start = () => act(async () => {
     const s = await api('sessions', { scenario, speed, seed: 42 });
     await api(`sessions/${s.id}/start`, {});
-    const new_s = await api('sessions');
-    S(new_s);
     SEL(s.id);
   });
   
@@ -115,19 +119,39 @@ export function App() {
           {page === 'Overview' && mode === 'research' && <Overview {...{ mode, scenario, speed, setScenario: SC, setSpeed: SP, start, session, selected, refresh, events, activeModel, activePrompts, latest, pred, SCENARIOS }} />}
           {page === 'Live session' && mode === 'research' && <LiveSession {...{ selected, scenario, session, speed, activeModel, pred, activePrompts, latest, obs, events }} />}
           {page === 'Interventions' && mode === 'research' && <Interventions {...{ prompts, act }} />}
-          {page === 'AI insights' && mode === 'research' && <AIInsights {...{ health, models, pred, act, refresh }} />}
+          {page === 'AI insights' && mode === 'research' && <AIInsights {...{ health, models: catalog, pred, act, refresh }} />}
           {page === 'Federated & privacy lab' && mode === 'research' && <FederatedLab {...{ health, jobs, privacy, runs, fedDisabled, fedReason, act }} />}
-          {page === 'Evidence' && mode === 'research' && <Evidence {...{ health, models, activeModel }} />}
+          {page === 'Evidence' && mode === 'research' && <Evidence {...{ health, models: catalog, activeModel }} />}
           {page === 'System & Embodiment' && mode === 'research' && <SystemEmbodiment />}
           
           {page === 'Home' && mode === 'user' && <Home {...{ session, pred, activePrompts, latest, start, act, selected }} />}
           {page === 'Guidance' && mode === 'user' && <Guidance {...{ activePrompts, act }} />}
           {page === 'History' && mode === 'user' && <History {...{ sessions, selected, events, SEL }} />}
           {page === 'About' && mode === 'user' && <About />}
-          {page === 'Settings' && <Settings {...{ speed, setSpeed: SP, activeModel }} />}
+          {page === 'Settings' && <Settings {...{ speed, setSpeed, activeModel }} />}
         </section>
         <footer>Research prototype · Recorded/simulated inputs · No live health measurements.</footer>
       </main>
     </div>
   );
+}""",
+
+    "main.tsx": """import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
+import { App } from './app/App';
+import './style.css';
+
+createRoot(document.getElementById('root')!).render(
+  <BrowserRouter>
+    <App />
+  </BrowserRouter>
+);"""
 }
+
+for filepath, content in files.items():
+    p = root / filepath
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(content, encoding="utf-8")
+    
+print("Created App.tsx and main.tsx")

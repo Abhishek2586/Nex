@@ -59,7 +59,7 @@ export function LiveSession({ selected, scenario, session, speed, activeModel, p
             <div className="help-box"><b>Threshold:</b> The cutoff score ({activeModel?.threshold || 'N/A'}) to trigger an intervention consideration.</div>
           </div>
         </div>
-        <div className="card">
+        <div className="card" data-testid="recent-predictions">
           <h2>Recent Predictions</h2>
           <table className="data-table">
             <thead><tr><th>Time</th><th>Source</th><th>Status</th><th>Score / Reason</th></tr></thead>

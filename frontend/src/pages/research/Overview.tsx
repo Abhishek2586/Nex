@@ -2,8 +2,8 @@ import React from 'react';
 import { api } from '../../api/client';
 import { SCENARIOS } from '../../app/routes';
 
-export function Overview({ mode, scenario, speed, setScenario, setSpeed, start, session, selected, refresh, events, activeModel, activePrompts, latest, pred }: any) {
-  const act = async (fn: () => Promise<unknown>) => { try { await fn(); await refresh(); } catch (e) { console.error(e); } };
+export function Overview({ mode, scenario, speed, setScenario, setSpeed, start, session, selected, refresh, events, activeModel, activePrompts, latest, pred, S }: any) {
+  const act = async (fn: () => Promise<unknown>) => { try { await fn(); const new_s = await api('sessions'); if (S) S(new_s); await refresh(); } catch (e) { console.error(e); } };
 
   return (
     <>

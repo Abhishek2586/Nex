@@ -236,15 +236,11 @@ def privacy_projection():
             proj_next.history.append((last_noise, last_sample_rate, last_steps))
             next_eps = proj_next.get_epsilon(delta)
             
-            # Calculate remaining rounds
-            test_proj = RDPAccountant()
-            test_proj.history = [tuple(item) for item in ledger.get("history", [])]
-            remaining = 0
-            # The UI needs a small planning hint, not an expensive unbounded
-            # accountant simulation on every two-second dashboard refresh.
-            while test_proj.get_epsilon(delta) <= 8.0 and remaining < 20:
-                test_proj.history.append((last_noise, last_sample_rate, last_steps))
-                remaining += 1
+            eps_gain = next_eps - ledger.get("epsilon", 0.0)
+            if eps_gain > 0:
+                remaining = int((8.0 - ledger.get("epsilon", 0.0)) / eps_gain)
+            else:
+                remaining = 0
                 
             ledgers.append({
                 "client_id": ledger.get("client_id", "unknown"),
