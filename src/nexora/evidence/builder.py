@@ -54,6 +54,7 @@ ALLOWLISTED_STATIC = [
     "models/synthetic/baseline/metadata.json",
     "models/synthetic/neural/metadata.json",
     "models/registry/active.json",
+    "evidence/recorded/WESAD_EVALUATION.json",
 ]
 
 # Allowlisted glob patterns (relative to ROOT)
@@ -202,7 +203,7 @@ def build_evidence_package(root: Path, output_path: Path) -> dict[str, Any]:
         "feature_schema_hash": feature_schema_hash,
         "source_status": {
             "synthetic": "executed",
-            "wesad": "NOT_RUN — dataset not supplied",
+            "wesad": "COMPLETED — evaluation executed locally; raw dataset not in repo; evidence at evidence/recorded/WESAD_EVALUATION.json",
             "hardware": "NOT_BUILT",
             "cloud": "OUT_OF_SCOPE",
             "clinical": "NOT_PERFORMED",

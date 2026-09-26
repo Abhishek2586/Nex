@@ -123,7 +123,7 @@ def import_directory(source:Path,output_dir=Path('data/processed/wesad'),trusted
     else:
         windows_sha256 = ""
         
-    clients = {}
+    clients: dict[str, list[str]] = {}
     for i, s in enumerate(splits['train']):
         cid = ['client-a', 'client-b', 'client-c'][i % 3]
         clients.setdefault(cid, []).append(s)

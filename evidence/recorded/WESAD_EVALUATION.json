@@ -1,0 +1,97 @@
+{
+  "dataset": "WESAD",
+  "note": "Raw WESAD source files are not distributed in this repository. Evaluation was executed locally on a licensed copy of the dataset. Results are research algorithm metrics only and are NOT clinical validation.",
+  "raw_dataset_in_repo": false,
+  "evaluation_status": "COMPLETED",
+  "evaluation_timestamp": "2026-09-26T09:50:14Z",
+  "code_commit_at_evaluation": "65e5705",
+  "code_commit_note": "Evaluation executed at commit 65e5705 (feat: complete WESAD data ingestion and federated training pipeline). Evidence file first committed at 8d41f8b.",
+
+  "dataset_provenance": {
+    "dataset_sha256": "2667dc5de34a6fe1a46f7e035f3319e937daa6c846743628e0820dfaa2edaa2a",
+    "dataset_manifest_path": "data/processed/wesad/manifest.json",
+    "imported_subject_count": 15,
+    "imported_subject_ids": ["S2","S3","S4","S5","S6","S7","S8","S9","S10","S11","S13","S14","S15","S16","S17"],
+    "conversion_version": "1.0.0",
+    "feature_schema_hash": "c3508f9a98875f2221c47d1a1c2880865bcd980c610cd8d509fb1d7b5fed61e7",
+    "architecture_id": "mlp-12-ln-32-16-2-v1",
+    "splits": {
+      "train": ["S4","S6","S10","S8","S16","S3","S13","S11","S9"],
+      "validation": ["S15","S2","S5"],
+      "test": ["S7","S14","S17"]
+    },
+    "client_partitions": {
+      "client-a": ["S4","S8","S13"],
+      "client-b": ["S6","S16","S11"],
+      "client-c": ["S10","S3","S9"]
+    }
+  },
+
+  "models": {
+    "baseline": {
+      "model_hash": "d03fa5cc613769ff736032277352f8deb22d2bbcf438a8e0055aa5e894e3e069",
+      "metadata_path": "models/wesad/baseline/metadata.json",
+      "training_timestamp": "2026-09-26T09:48:38Z",
+      "balanced_accuracy": 0.7194972826086956,
+      "macro_f1": 0.7270276979820548,
+      "test_windows": 179
+    },
+    "neural": {
+      "model_hash": "5bd37a95d8b0197c3bad4a029c5975e6f4a1bbd8d98cba7a22ea33a6353b69bc",
+      "metadata_path": "models/wesad/neural/metadata.json",
+      "training_timestamp": "2026-09-26T09:48:55Z",
+      "architecture_id": "mlp-12-ln-32-16-2-v1",
+      "threshold": 0.22,
+      "threshold_selection_metric": "balanced_accuracy",
+      "validation_balanced_accuracy": 0.8040464063384267,
+      "balanced_accuracy": 0.4827445652173913,
+      "macro_f1": 0.34729476692618505,
+      "test_windows": 179
+    }
+  },
+
+  "federated": {
+    "run_id": "aa6a2066-cdec-44f8-af84-f369e2b9ad43",
+    "manifest_path": "artifacts/runs/aa6a2066-cdec-44f8-af84-f369e2b9ad43/manifest.json",
+    "mode": "federated",
+    "protocol_version": "nexora-fed-v1",
+    "rounds": 1,
+    "base_model_hash": "a91c1a5e873891cdde18d80a7cf005e79b847065573bddc3d0049fb41c1fe457",
+    "final_model_hash": "cd98ef077da3b2a4175fbf5dbf481c9f13f0843c765382c5ef34399886c04a24",
+    "threshold": 0.53,
+    "threshold_selection_metric": "balanced_accuracy",
+    "validation_balanced_accuracy": 0.5335314091680815,
+    "timestamp": "2026-09-26T09:49:56Z",
+    "balanced_accuracy": 0.38233695652173916,
+    "macro_f1": 0.38249991939903927,
+    "test_windows": 179
+  },
+
+  "private_federated": {
+    "run_id": "45aa9b95-cadf-40d6-8fb7-0cd06febcc8e",
+    "manifest_path": "artifacts/runs/45aa9b95-cadf-40d6-8fb7-0cd06febcc8e/manifest.json",
+    "mode": "private-federated",
+    "protocol_version": "nexora-fed-v1",
+    "rounds": 1,
+    "base_model_hash": "90a8ba9b03bec94425577669c8d5417c2f29a8c21b1aa91627234566832501e8",
+    "final_model_hash": "087e33ec2658da14278e9c96301e42ea9ba70cda77db961d6f644081c1094086",
+    "threshold": 0.54,
+    "threshold_selection_metric": "balanced_accuracy",
+    "validation_balanced_accuracy": 0.5564516129032258,
+    "timestamp": "2026-09-26T09:50:14Z",
+    "balanced_accuracy": 0.5546875,
+    "macro_f1": 0.49928841340727287,
+    "test_windows": 179,
+    "privacy_note": "Opacus DP applied per-client. Secure aggregation NOT implemented."
+  },
+
+  "provenance_recovery_notes": [
+    "dataset_sha256: taken from data/processed/wesad/manifest.json (windows_sha256 field) and cross-checked with models/wesad/baseline/metadata.json dataset_hash.",
+    "baseline model_hash: taken from models/wesad/baseline/metadata.json.",
+    "neural model_hash and thresholds: taken from models/wesad/neural/metadata.json.",
+    "federated run metadata: taken from artifacts/runs/aa6a2066.../manifest.json.",
+    "private federated run metadata: taken from artifacts/runs/45aa9b95.../manifest.json.",
+    "code_commit_at_evaluation: recovered from git log; commit 65e5705 introduced the WESAD pipeline. Exact SHA of evaluation environment is approximate as the evaluation predates evidence file creation.",
+    "source_artifacts list was empty in previous version; provenance now recovered from local artifact files that survived the run."
+  ]
+}

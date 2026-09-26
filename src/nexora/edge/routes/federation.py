@@ -42,7 +42,7 @@ def metrics():
 @router.get('/data/status')
 def data_status():
     wesad_manifest_path = ROOT / 'data/processed/wesad/manifest.json'
-    wesad_eval_path = ROOT / 'artifacts/reports/WESAD_EVALUATION.json'
+    wesad_eval_path = ROOT / 'evidence/recorded/WESAD_EVALUATION.json'
     
     raw_data_available_locally = wesad_manifest_path.exists()
     import_status = "COMPLETED" if raw_data_available_locally else "NOT_AVAILABLE_IN_THIS_CLONE"
@@ -59,14 +59,16 @@ def data_status():
         try:
             m = json.loads(wesad_eval_path.read_text())
             recorded_evaluation_status = m.get("evaluation_status", "NOT RUN")
-            dataset_hash = m.get("dataset_sha256", "")
-            subject_count = m.get("imported_subject_count", 0)
-            
-            train = m.get("train_subjects", [])
-            val = m.get("validation_subjects", [])
-            test = m.get("test_subjects", [])
+            # New format: provenance nested under dataset_provenance
+            prov = m.get("dataset_provenance", {})
+            dataset_hash = prov.get("dataset_sha256", m.get("dataset_sha256", ""))
+            subject_count = prov.get("imported_subject_count", m.get("imported_subject_count", 0))
+            sp = prov.get("splits", {})
+            train = sp.get("train", m.get("train_subjects", []))
+            val = sp.get("validation", m.get("validation_subjects", []))
+            test = sp.get("test", m.get("test_subjects", []))
             splits = {"train": train, "validation": val, "test": test}
-            
+
             if "baseline" in m.get("models", {}) or "neural" in m.get("models", {}):
                 centralized_status = "COMPLETED"
             if m.get("federated"):
