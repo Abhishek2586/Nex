@@ -156,7 +156,7 @@ test.describe('NEXORA Dashboard Flows', () => {
     await expect(page.getByText('client-b').first()).toBeVisible();
     await expect(page.getByText('client-c').first()).toBeVisible();
     
-    const runBtn = page.getByRole('button', { name: 'Run 1-round FedAvg' });
+    const runBtn = page.getByRole('button', { name: 'Run 1-round FedAvg', exact: true });
     await expect(runBtn).toBeEnabled({ timeout: 10000 });
     await runBtn.click();
     
