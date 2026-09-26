@@ -40,7 +40,7 @@ Started: 2026-09-18.
 |---|---|---|
 | Startup/Shutdown Robustness | PASS | 10048 WinErrors fixed; proper psutil process tree ownership. |
 | Single Instance Locks | PASS | `process.json` checks and port preflights implemented. |
-| Fresh Clone Rehearsal | PASS | 10/10 Playwright tests pass in clean clone at f284bbd. Evidence page correctly shows WESAD recorded evaluation: COMPLETED from committed WESAD_EVALUATION.json. |
+| Fresh Clone Rehearsal | PASS | 10/10 Playwright tests pass in clean clone at 6e3a92d. Evidence page correctly shows WESAD recorded evaluation: COMPLETED from committed WESAD_EVALUATION.json. |
 | Architecture Validation | PASS | Predictor rejects mismatched architecture_id at load time. |
 | Threshold Safety | PASS | Missing threshold returns `no_action` with reason `missing_active_model_threshold`. |
 | Dynamic Threshold Selection | PASS | Threshold selected on validation split only; test split not touched during selection. |
@@ -55,7 +55,7 @@ Started: 2026-09-18.
 | Predictor Reload Tracking | PASS | Silent failures eliminated; loaded_model_hash, reload_status, reload_error exposed. |
 | Reviewer hardening | IN PROGRESS | Addressing 40-point hardening checklist. |
 | CI Green | IN PROGRESS | GitHub Actions CI runs on ubuntu-latest; local verification fully passes. |
-| Final Acceptance | PASS | Fresh-clone rehearsal 10/10 at commit f284bbd. |
+| Final Acceptance | PARTIAL | Reviewer hardening and CI Green awaiting final GitHub Actions run confirmation. Fresh clone rehearsal 10/10 at commit 6e3a92d. |
 
 - 2026-09-22 audit: 20 Python tests pass locally. Tests are clean-clone safe — they skip gracefully where generated artifacts (trained models) are absent. Two third-party deprecation warnings remain (httpx starlette) which are not Nexora code.
 - Evidence ZIP uses a canonical builder with allowlist-based inclusion and rich manifest (git_commit, active_model_hash, architecture_id, feature_schema_hash, per-file sha256).
