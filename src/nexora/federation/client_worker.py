@@ -30,7 +30,7 @@ def _load_ledger(path: Path):
     return json.loads(path.read_text())
 
 
-def train_client(client_id: str, base: Path, output: Path, private: bool, run_id: str, round_id: str, base_hash: str, schema_hash: str, architecture_id: str, dataset: str = "synthetic"):
+def train_client(client_id: str, base: Path, output: Path, private: bool, run_id: str, round_id: str, base_hash: str, schema_hash: str, architecture_id: str, dataset_name: str = "synthetic"):
     torch.set_num_threads(1)
     import hashlib
     
@@ -51,17 +51,17 @@ def train_client(client_id: str, base: Path, output: Path, private: bool, run_id
             
     model = network()
     model.load_state_dict(load_file(str(base)))
-    x, y, dataset_hash = _load_partition(client_id, dataset)
-    dataset = torch.utils.data.TensorDataset(torch.tensor(x), torch.tensor(y))
-    batch_size = min(32, len(dataset))
+    x, y, dataset_hash = _load_partition(client_id, dataset_name)
+    training_dataset = torch.utils.data.TensorDataset(torch.tensor(x), torch.tensor(y))
+    batch_size = min(32, len(training_dataset))
     generator = torch.Generator().manual_seed(4200 + ord(client_id[-1]))
-    loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, generator=generator)
+    loader = torch.utils.data.DataLoader(training_dataset, batch_size=batch_size, shuffle=True, generator=generator)
     optimizer = torch.optim.SGD(model.parameters(), lr=0.05)
     privacy = None
     ledger_path = Path("runtime") / client_id / "privacy.json"
     ledger_path.parent.mkdir(parents=True, exist_ok=True)
     ledger = _load_ledger(ledger_path)
-    delta = min(1e-5, 1 / (100 * len(dataset)))
+    delta = min(1e-5, 1 / (100 * len(training_dataset)))
     noise = 1.2
     if private:
         from opacus import PrivacyEngine
@@ -95,7 +95,7 @@ def train_client(client_id: str, base: Path, output: Path, private: bool, run_id
         plain = model._module
         ledger = {
             "client_id": client_id,
-            "privacy_unit": "one non-overlapping 30-second synthetic window" if dataset == "synthetic" else "one non-overlapping 30-second WESAD window",
+            "privacy_unit": "one non-overlapping 30-second synthetic window" if dataset_name == "synthetic" else "one non-overlapping 30-second WESAD window",
             "accountant": "RDPAccountant",
             "history": [list(item) for item in privacy.accountant.history],
             "steps": ledger["steps"] + steps,
@@ -118,9 +118,11 @@ def train_client(client_id: str, base: Path, output: Path, private: bool, run_id
         "update_hash": hashlib.sha256(output.read_bytes()).hexdigest(),
         "feature_schema_hash": SCHEMA_HASH,
         "architecture_id": ARCHITECTURE_ID,
-        "records": len(dataset), 
+        "records": len(training_dataset), 
         "steps": steps, 
-        "private": private
+        "private": private,
+        "dataset": dataset_name,
+        "dataset_hash": dataset_hash
     }
     if private:
         metadata["privacy"] = ledger

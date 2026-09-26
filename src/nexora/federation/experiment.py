@@ -26,6 +26,11 @@ def run(rounds=5, private=False, dataset="synthetic"):
     # Task 13: Federation explicitly uses random initialization as the round-0 base.
     # This trains a fresh global candidate rather than adapting the current active model.
     # Design choice: fresh random init for federation, documented in manifest as base_model_source.
+    
+    data_dir = Path("data/synthetic") if dataset == "synthetic" else Path(f"data/processed/{dataset}")
+    manifest = json.loads((data_dir / "manifest.json").read_text())
+    expected_dataset_hash = manifest.get("windows_sha256", "synthetic-seed-42" if dataset == "synthetic" else "")
+    
     model = network()
     base = root / "round-0.safetensors"
     save_file(model.state_dict(), str(base))
@@ -101,6 +106,8 @@ def run(rounds=5, private=False, dataset="synthetic"):
             if meta.get("base_model_hash") != base_hash: raise RuntimeError("Client update base_model_hash mismatch")
             if meta.get("feature_schema_hash") != SCHEMA_HASH: raise RuntimeError("Client update feature_schema_hash mismatch")
             if meta.get("architecture_id") != ARCHITECTURE_ID: raise RuntimeError("Client update architecture_id mismatch")
+            if meta.get("dataset") != dataset: raise RuntimeError("Client update dataset mismatch")
+            if meta.get("dataset_hash") != expected_dataset_hash: raise RuntimeError("Client update dataset_hash mismatch")
             if meta.get("records", 0) <= 0: raise RuntimeError("Client update has no records")
             
             # Validation: check hashes and duplicates
@@ -166,8 +173,6 @@ def run(rounds=5, private=False, dataset="synthetic"):
         history.append(hist_item)
         base = next_path
         
-    data_dir = Path("data/synthetic") if dataset == "synthetic" else Path(f"data/processed/{dataset}")
-    manifest = json.loads((data_dir / "manifest.json").read_text())
     with np.load(data_dir / "windows.npz", allow_pickle=False) as data:
         val_mask = np.isin(data["subjects"], manifest["splits"]["validation"])
         test_mask = np.isin(data["subjects"], manifest["splits"]["test"])
@@ -213,7 +218,7 @@ def run(rounds=5, private=False, dataset="synthetic"):
         "test_balanced_accuracy": metrics.get("balanced_accuracy"),
         "test_macro_f1": metrics.get("macro_f1"),
         "selected_at": time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
-        "privacy_scope": "example-level synthetic windows" if private else None,
+        "privacy_scope": ("example-level non-overlapping 30-second synthetic windows" if dataset == "synthetic" else "example-level non-overlapping 30-second WESAD windows") if private else None,
         "status": "completed",
         "lifecycle_state": "candidate",
         "protocol_version": "nexora-fed-v1",

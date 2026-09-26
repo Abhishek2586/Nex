@@ -42,19 +42,86 @@ def metrics():
 @router.get('/data/status')
 def data_status():
     wesad_manifest_path = ROOT / 'data/processed/wesad/manifest.json'
-    wesad_status = {"status": "NOT RUN"}
+    
+    centralized_status = "NOT RUN"
+    federated_status = "NOT RUN"
+    private_federated_status = "NOT RUN"
+    import_status = "NOT RUN"
+    
+    subject_count = 0
+    dataset_hash = ""
+    splits = {}
     if wesad_manifest_path.exists():
+        import_status = "COMPLETED"
         try:
             m = json.loads(wesad_manifest_path.read_text())
-            wesad_status = {
-                "status": "COMPLETED",
-                "subject_count": m.get("imported_subject_count", 0),
-                "dataset_hash": m.get("windows_sha256", ""),
-                "splits": m.get("splits", {})
-            }
+            subject_count = m.get("imported_subject_count", 0)
+            dataset_hash = m.get("windows_sha256", "")
+            splits = m.get("splits", {})
         except Exception: pass
         
+    wesad_models = [ROOT / 'models/wesad/baseline/metadata.json', ROOT / 'models/wesad/neural/metadata.json']
+    if any(m.exists() for m in wesad_models):
+        centralized_status = "COMPLETED"
+        
+    for path in (ROOT / 'artifacts/runs').glob('*/manifest.json'):
+        try:
+            manifest = json.loads(path.read_text())
+            if manifest.get('dataset') == 'wesad':
+                if manifest.get('mode') == 'federated':
+                    federated_status = "COMPLETED"
+                elif manifest.get('mode') == 'private-federated':
+                    private_federated_status = "COMPLETED"
+        except Exception: pass
+        
+    wesad_status = {
+        "import_status": import_status,
+        "centralized_status": centralized_status,
+        "federated_status": federated_status,
+        "private_federated_status": private_federated_status,
+        "subject_count": subject_count,
+        "dataset_hash": dataset_hash,
+        "splits": splits
+    }
+        
     return {"wesad": wesad_status}
+
+@router.get('/models/catalog')
+def get_model_catalog():
+    catalog = []
+    
+    def try_load(path, role):
+        if path.exists():
+            try:
+                data = json.loads(path.read_text())
+                data["role"] = role
+                catalog.append(data)
+            except Exception: pass
+            
+    try_load(ROOT / 'models/synthetic/baseline/metadata.json', "Synthetic baseline")
+    try_load(ROOT / 'models/synthetic/neural/metadata.json', "Synthetic neural")
+    try_load(ROOT / 'models/wesad/baseline/metadata.json', "WESAD baseline")
+    try_load(ROOT / 'models/wesad/neural/metadata.json', "WESAD neural")
+    
+    active_path = ROOT / 'models/registry/active.json'
+    history_path = ROOT / 'models/registry/history.json'
+    
+    if active_path.exists():
+        try:
+            data = json.loads(active_path.read_text())
+            data["role"] = "Active registry entry"
+            catalog.append(data)
+        except Exception: pass
+        
+    if history_path.exists():
+        try:
+            history = json.loads(history_path.read_text())
+            for h in history:
+                h["role"] = "Historical registry entry"
+                catalog.append(h)
+        except Exception: pass
+        
+    return catalog
 
 @router.get('/experiments')
 def experiments():

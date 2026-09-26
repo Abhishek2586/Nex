@@ -88,9 +88,24 @@ def test_wesad_private_ledger(tmp_path):
         base_hash=base_hash,
         schema_hash=SCHEMA_HASH,
         architecture_id=ARCHITECTURE_ID,
-        dataset="wesad"
+        dataset_name="wesad"
     )
     
     assert meta["privacy"]["privacy_unit"] == "one non-overlapping 30-second WESAD window"
     manifest = json.loads((data_dir / "manifest.json").read_text())
     assert meta["privacy"]["dataset_identity"] == manifest["windows_sha256"]
+
+    # also test synthetic privacy unit
+    meta_synth = train_client(
+        client_id="client-a",
+        base=base,
+        output=output,
+        private=True,
+        run_id="test_run",
+        round_id="1",
+        base_hash=base_hash,
+        schema_hash=SCHEMA_HASH,
+        architecture_id=ARCHITECTURE_ID,
+        dataset_name="synthetic"
+    )
+    assert meta_synth["privacy"]["privacy_unit"] == "one non-overlapping 30-second synthetic window"
