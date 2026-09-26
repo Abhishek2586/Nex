@@ -75,11 +75,26 @@ def main():
         if clone_sha != head_sha:
             raise Exception(f"Clone HEAD ({clone_sha}) does not match source HEAD ({head_sha})")
             
-        # Step 6: Verify no artifacts exist
-        forbidden = [".venv", "data", "models", "runtime", "artifacts"]
-        for f in forbidden:
+        # Step 6: Verify no runtime-generated directories/files exist.
+        # Note: artifacts/reports/WESAD_EVALUATION.json is a committed evidence
+        # artifact and is intentionally present in clean clones.
+        runtime_forbidden = [".venv", "data", "models", "runtime"]
+        for f in runtime_forbidden:
             if (clone_dir / f).exists():
-                raise Exception(f"Fresh clone contains forbidden file/dir: {f}")
+                raise Exception(f"Fresh clone contains forbidden runtime dir: {f}")
+
+        # artifacts/ is allowed only if its sole content is the committed evidence file.
+        artifacts_dir = clone_dir / "artifacts"
+        if artifacts_dir.exists():
+            committed_evidence = artifacts_dir / "reports" / "WESAD_EVALUATION.json"
+            unexpected = [
+                p for p in artifacts_dir.rglob("*")
+                if p.is_file() and p != committed_evidence
+            ]
+            if unexpected:
+                raise Exception(
+                    f"Fresh clone artifacts/ contains unexpected runtime files: {[str(u.relative_to(clone_dir)) for u in unexpected]}"
+                )
                 
         # Node versions
         try:
