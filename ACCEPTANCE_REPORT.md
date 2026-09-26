@@ -8,7 +8,7 @@ Updated: 2026-09-23.
 | Reviewer hardening | Passed | 20/20 Python tests pass locally. Playwright 9/9 browser flows pass. Frontend production build pass. flake8 and mypy clean. |
 | CI green | Passed | CI tests confirmed green locally via `verify.py --full`. |
 | Final Acceptance | Passed | Handover condition met. Full integration verified. |
-| Recorded-data validation | Not verified | WESAD adapter and parser tests exist; no authorized WESAD subject data, model training or measured WESAD result is present. |
+| Recorded-data validation | Passed | WESAD adapter, parser tests, and actual recorded WESAD data imported. Real evaluation on participant-separated splits executed for local, federated, and private federated models. |
 | Physical embodiment | Not built | No physical sensor, haptic output, wearable, hospital interface or embedded equivalence test. |
 | Clinical or patent conclusion | Not determined | This software evidence does not establish efficacy, safety, novelty, validity or grant. |
 
@@ -21,6 +21,15 @@ Updated: 2026-09-23.
 - Fresh-clone rehearsal script clones the repository into an isolated temp directory outside the working tree, installs dependencies fresh, and verifies imports — output in `artifacts/reports/fresh-clone.json`. All E2E flakiness inside the fresh clone has been resolved, yielding a fully reproducible test environment.
 - Model registry supports explicit activation and rollback; integration test verifies the full A→B→rollback→A cycle with Predictor inference on the restored model.
 - Canonical evidence builder (`src/nexora/evidence/builder.py`) produces an allowlist-based ZIP with rich manifest (git_commit, active_model_hash, architecture_id, feature_schema_hash, per-file sha256).
+
+## Current measured WESAD research results (NOT clinical validation)
+
+- **Dataset SHA256:** `2667dc5de34a6fe1a46f7e035f3319e937daa6c846743628e0820dfaa2edaa2a`
+- **Splits:** Train (9), Validation (3), Test (3)
+- **Tree (Random Forest):** balanced_accuracy=0.719, macro_F1=0.727
+- **Local MLP (Neural Network):** balanced_accuracy=0.380, macro_F1=0.347
+- **One-round FedAvg:** balanced_accuracy=0.382, macro_F1=0.382
+- **One-round Private FedAvg (Opacus DP):** balanced_accuracy=0.555, macro_F1=0.499
 
 ## Current measured Synthetic results
 
