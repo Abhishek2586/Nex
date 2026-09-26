@@ -52,7 +52,14 @@ def import_subject(path:Path,output_dir:Path,trusted_original=False):
     if not trusted_original: raise ValueError('Refusing pickle load without --trusted-original confirmation')
     with path.open('rb') as handle:
         payload=pickle.load(handle,encoding='latin1')
-    wrist=payload['signal']['wrist']
+    try:
+        wrist=payload['signal']['wrist']
+        _ = wrist['EDA']
+        _ = wrist['TEMP']
+        _ = wrist['ACC']
+        _ = payload['label']
+    except (KeyError, TypeError) as e:
+        raise ValueError("Malformed WESAD input: required channels missing") from e
     subject=payload.get('subject',path.stem)
     result=convert_arrays(wrist['EDA'],wrist['TEMP'],wrist['ACC'],payload['label'],subject)
     output_dir=Path(output_dir); output_dir.mkdir(parents=True,exist_ok=True)
@@ -104,15 +111,38 @@ def import_directory(source:Path,output_dir=Path('data/processed/wesad'),trusted
         all_subjects.extend([res['subject']] * len(data['y']))
         
     if all_x:
+        win_path = output_dir / 'windows.npz'
         np.savez_compressed(
-            output_dir / 'windows.npz',
+            win_path,
             x=np.concatenate(all_x),
             y=np.concatenate(all_y),
             starts_s=np.concatenate(all_starts),
             subjects=np.array(all_subjects)
         )
+        windows_sha256 = hashlib.sha256(win_path.read_bytes()).hexdigest()
+    else:
+        windows_sha256 = ""
         
-    manifest={'real_dataset_status':'imported','source':'Recorded dataset','dataset':'WESAD','subjects':subjects,'subject_count':len(results),'splits':splits,'feature_schema_hash':SCHEMA_HASH}
+    clients = {}
+    for i, s in enumerate(splits['train']):
+        cid = ['client-a', 'client-b', 'client-c'][i % 3]
+        clients.setdefault(cid, []).append(s)
+        
+    subject_hashes = {res['subject']: {'input_sha256': res['input_sha256'], 'output_sha256': res['output_sha256']} for res in results}
+        
+    manifest={
+        'real_dataset_status':'imported',
+        'source':'Recorded dataset',
+        'dataset':'WESAD',
+        'imported_subject_ids':subjects,
+        'imported_subject_count':len(results),
+        'splits':splits,
+        'clients': clients,
+        'feature_schema_hash':SCHEMA_HASH,
+        'windows_sha256': windows_sha256,
+        'conversion_version': '1.0.0',
+        'subject_hashes': subject_hashes
+    }
     Path(output_dir).mkdir(parents=True,exist_ok=True)
     (Path(output_dir)/'manifest.json').write_text(json.dumps(manifest,indent=2))
     return manifest

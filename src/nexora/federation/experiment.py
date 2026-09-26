@@ -57,6 +57,7 @@ def run(rounds=5, private=False, dataset="synthetic"):
                 base_hash = hashlib.sha256(base.read_bytes()).hexdigest()
                 payload = {
                     'private': 'true' if private else 'false',
+                    'dataset': dataset,
                     'run_id': run_id,
                     'round_id': str(round_number),
                     'base_model_hash': base_hash,

@@ -39,6 +39,23 @@ def metrics():
         
     return results
 
+@router.get('/data/status')
+def data_status():
+    wesad_manifest_path = ROOT / 'data/processed/wesad/manifest.json'
+    wesad_status = {"status": "NOT RUN"}
+    if wesad_manifest_path.exists():
+        try:
+            m = json.loads(wesad_manifest_path.read_text())
+            wesad_status = {
+                "status": "COMPLETED",
+                "subject_count": m.get("imported_subject_count", 0),
+                "dataset_hash": m.get("windows_sha256", ""),
+                "splits": m.get("splits", {})
+            }
+        except Exception: pass
+        
+    return {"wesad": wesad_status}
+
 @router.get('/experiments')
 def experiments():
     manifests = []
@@ -232,6 +249,7 @@ def _validate_round_id(round_id: str) -> int:
 async def train(
     base_model: UploadFile = File(...),
     private: bool = Form(False),
+    dataset: str = Form("synthetic"),
     run_id: str = Form(...),
     round_id: str = Form(...),
     base_model_hash: str = Form(...),
@@ -270,7 +288,7 @@ async def train(
     base_path.write_bytes(content_bytes)
 
     try:
-        metadata = train_client(cid, base_path, output_path, private, run_id, str(validated_round), base_model_hash, feature_schema_hash, architecture_id)
+        metadata = train_client(cid, base_path, output_path, private, run_id, str(validated_round), base_model_hash, feature_schema_hash, architecture_id, dataset)
         metadata['protocol_version'] = protocol_version
     except Exception as e:
         raise HTTPException(500, f'Training failed: {str(e)}')

@@ -19,7 +19,7 @@ test.describe('NEXORA Dashboard Flows', () => {
     
     // Check History page loads
     await page.getByRole('link', { name: 'History' }).click();
-    await expect(page.getByText('Sessions are retained in local SQLite storage')).toBeVisible();
+    await expect(page.getByText('Your sessions are retained only in local storage.')).toBeVisible();
   });
 
   test('2. Research Mode: Normal Scenario', async ({ page }) => {
@@ -40,7 +40,7 @@ test.describe('NEXORA Dashboard Flows', () => {
     await expect(page.locator('.status')).toHaveText('Status: running', { timeout: 15000 });
     await page.getByRole('link', { name: 'Live session' }).click();
     await expect(page).toHaveURL(/.*Live%20session/);
-    await expect(page.getByRole('heading', { name: 'Model state' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Model State & Current Interpretation' })).toBeVisible();
     
     // Stop session
     await page.getByRole('link', { name: 'Overview' }).click();
@@ -120,7 +120,7 @@ test.describe('NEXORA Dashboard Flows', () => {
     // Check user guidance page
     await page.getByText('Research Mode').click(); // switch to user
     await page.getByRole('link', { name: 'Guidance' }).click();
-    await expect(page.getByText('No action is needed right now.')).toBeVisible();
+    await expect(page.getByText('No action is needed right now. Continue your work comfortably.')).toBeVisible();
     
     await page.getByRole('link', { name: 'Home' }).click();
     await page.getByRole('button', { name: 'End session' }).click();

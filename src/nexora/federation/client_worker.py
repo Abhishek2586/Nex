@@ -10,15 +10,18 @@ from nexora.features.extract import normalize
 from nexora.ml.train import network
 
 
-def _load_partition(client_id: str):
-    root = Path("data/synthetic")
+def _load_partition(client_id: str, dataset: str):
+    if dataset not in ["synthetic", "wesad"]:
+        raise ValueError("dataset must be synthetic or wesad")
+    root = Path(f"data/{dataset}" if dataset == "synthetic" else f"data/processed/{dataset}")
     manifest = json.loads((root / "manifest.json").read_text())
     with np.load(root / "windows.npz", allow_pickle=False) as data:
         mask = np.isin(data["subjects"], manifest["clients"][client_id])
         x = normalize(data["x"][mask])
         y = data["y"][mask].astype(np.int64)
 
-    return x, y
+    dataset_hash = manifest.get("windows_sha256", "synthetic-seed-42" if dataset == "synthetic" else "")
+    return x, y, dataset_hash
 
 
 def _load_ledger(path: Path):
@@ -27,7 +30,7 @@ def _load_ledger(path: Path):
     return json.loads(path.read_text())
 
 
-def train_client(client_id: str, base: Path, output: Path, private: bool, run_id: str, round_id: str, base_hash: str, schema_hash: str, architecture_id: str):
+def train_client(client_id: str, base: Path, output: Path, private: bool, run_id: str, round_id: str, base_hash: str, schema_hash: str, architecture_id: str, dataset: str = "synthetic"):
     torch.set_num_threads(1)
     import hashlib
     
@@ -48,7 +51,7 @@ def train_client(client_id: str, base: Path, output: Path, private: bool, run_id
             
     model = network()
     model.load_state_dict(load_file(str(base)))
-    x, y = _load_partition(client_id)
+    x, y, dataset_hash = _load_partition(client_id, dataset)
     dataset = torch.utils.data.TensorDataset(torch.tensor(x), torch.tensor(y))
     batch_size = min(32, len(dataset))
     generator = torch.Generator().manual_seed(4200 + ord(client_id[-1]))
@@ -92,7 +95,7 @@ def train_client(client_id: str, base: Path, output: Path, private: bool, run_id
         plain = model._module
         ledger = {
             "client_id": client_id,
-            "privacy_unit": "one non-overlapping 30-second synthetic window",
+            "privacy_unit": "one non-overlapping 30-second synthetic window" if dataset == "synthetic" else "one non-overlapping 30-second WESAD window",
             "accountant": "RDPAccountant",
             "history": [list(item) for item in privacy.accountant.history],
             "steps": ledger["steps"] + steps,
@@ -101,7 +104,7 @@ def train_client(client_id: str, base: Path, output: Path, private: bool, run_id
             "noise_multiplier": noise,
             "max_grad_norm": 1.0,
             "randomness_mode": "experimental_non_cryptographic",
-            "dataset_identity": "synthetic-seed-42",
+            "dataset_identity": dataset_hash,
         }
         ledger_path.write_text(json.dumps(ledger, indent=2))
     else:
@@ -136,8 +139,9 @@ def main():
     parser.add_argument("--base_hash", type=str, required=True)
     parser.add_argument("--schema_hash", type=str, required=True)
     parser.add_argument("--architecture_id", type=str, required=True)
+    parser.add_argument("--dataset", type=str, default="synthetic")
     args = parser.parse_args()
-    print(json.dumps(train_client(args.client, args.base, args.output, args.private, args.run_id, args.round_id, args.base_hash, args.schema_hash, args.architecture_id)))
+    print(json.dumps(train_client(args.client, args.base, args.output, args.private, args.run_id, args.round_id, args.base_hash, args.schema_hash, args.architecture_id, args.dataset)))
 
 
 if __name__ == "__main__":

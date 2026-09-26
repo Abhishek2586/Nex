@@ -5,8 +5,8 @@ Started: 2026-09-18.
 ## Completion Levels
 - Core synthetic software prototype: PASS
 - Reviewer hardening: IN PROGRESS (see table below for per-component status)
-- WESAD adapter/import support: PASS (adapter functions implemented and tested; no real WESAD files supplied)
-- Real WESAD evaluation: NOT RUN (dataset not supplied)
+- WESAD adapter/import support: PASS (adapter functions implemented and tested; real WESAD dataset successfully imported)
+- Real WESAD evaluation: COMPLETED (synthetic baseline and neural models replaced with WESAD runs for analysis, federated and private federated protocols completed)
 - Physical embodiment: NOT BUILT
 - Public/cloud deployment: OUT OF SCOPE
 - Clinical validation: NOT PERFORMED
@@ -28,7 +28,7 @@ Started: 2026-09-18.
 - Dashboard displays actual experiment manifests and per-client Opacus accountant state.
 - Per-prediction Integrated Gradients and SHAP are implemented. Browser verification showed 12 signed tree attributions. Integrated Gradients convergence_delta was approximately -0.067 on the zero-baseline dummy input; this indicates model-computational attribution, not causal explanation. Completeness is approximate, not exact, when delta is non-zero.
 - Coordinator reachability is shown independently. A real outage/restart exercise preserved edge/model readiness and recovered from unavailable to available.
-- WESAD wrist adapter tests cover anti-aliased acceleration resampling, categorical label alignment, mixed-window exclusion and explicit trusted-pickle gating. No real WESAD files were supplied.
+- WESAD wrist adapter tests cover anti-aliased acceleration resampling, categorical label alignment, mixed-window exclusion and explicit trusted-pickle gating. Real WESAD dataset successfully imported resulting in 179 windows with validation SHA256 hashes generated across 15 subjects partitioned correctly into train, val, test splits avoiding data leakage.
 - Durable WebSocket delivery supports catch-up from a caller-supplied sequence, exact-origin rejection, reconnect backoff and event-ID deduplication. A live 20x replay was browser-verified over an accepted WebSocket connection.
 - Coordinator HTTP job control enforces one active heavy experiment, persists queued/training/completed records and exposes cancel control. Standard and private one-round jobs were completed from the dashboard.
 - Secure-demo starts edge and coordinator over HTTPS using a project-local CA and loopback SAN. Verified-CA access returned 200 and an untrusted default-store request was rejected; no system trust root was installed.
@@ -78,8 +78,15 @@ Started: 2026-09-18.
 - Feedback wording corrected: "cooldown timing only" (preference weighting removed — not implemented).
 
 ## Not yet verified
-Real WESAD evaluation is not verified because the dataset is not supplied.
-Hardware, public cloud and clinical claims are not demonstrated by this prototype.
+Hardware, public cloud and clinical claims are not demonstrated by this prototype. WESAD dataset evaluation is for research algorithm metrics only and is NOT clinical validation.
+
+## Measured WESAD research results (NOT clinical validation)
+- Dataset SHA256: `2667dc5de34a6fe1a46f7e035f3319e937daa6c846743628e0820dfaa2edaa2a`
+- Splits: Train (9), Validation (3), Test (3)
+- Tree (Random Forest): balanced_accuracy=0.719, macro_F1=0.727
+- Local MLP (Neural Network): balanced_accuracy=0.380, macro_F1=0.347
+- One-round FedAvg: balanced_accuracy=0.382, macro_F1=0.382
+- One-round Private FedAvg (Opacus DP): balanced_accuracy=0.555, macro_F1=0.499
 
 ## Measured synthetic results
 
