@@ -10,12 +10,20 @@ export function FederatedLab({ health, jobs, privacy, runs, fedDisabled, fedReas
         <p>To improve the global stress-inference model without centralizing sensitive physiological data (EDA, Temp), NEXORA learns locally on the edge and aggregates model updates (not raw data). <i>Note: This prototype simulates federated nodes as local processes on the same machine. Secure Aggregation is out of scope for this build.</i></p>
       </div>
       <div className="card controls">
+        <h3>Synthetic Data</h3>
         <button disabled={fedDisabled} onClick={() => act(() => api('experiment-jobs', { mode: 'federated', rounds: 1, dataset: 'synthetic' }))}>Run 1-round FedAvg</button>
         <button disabled={fedDisabled} onClick={() => act(() => api('experiment-jobs', { mode: 'federated', rounds: 3, dataset: 'synthetic' }))}>Run 3-round FedAvg</button>
         <button disabled={fedDisabled} onClick={() => act(() => api('experiment-jobs', { mode: 'federated', rounds: 5, dataset: 'synthetic' }))}>Run 5-round FedAvg</button>
         <button disabled={fedDisabled} onClick={() => act(() => api('experiment-jobs', { mode: 'private-federated', rounds: 1, dataset: 'synthetic' }))}>Run Private FedAvg (DP)</button>
         <span className={`badge ${health.coordinator === 'available' ? 'badge-success' : 'badge-error'}`}>Coordinator {health.coordinator}</span>
         {fedDisabled && <span className="muted" style={{ marginLeft: '0.5rem' }}>{fedReason}</span>}
+        
+        <h3 style={{ marginTop: '1rem' }}>WESAD Recorded Data</h3>
+        <p><strong>WESAD measured experiment:</strong> {health.wesad?.recorded_evaluation_status === 'COMPLETED' ? 'Available' : 'Unavailable'}</p>
+        <p><strong>Run new WESAD experiment:</strong> {health.wesad?.raw_data_available_locally ? 'Available' : 'Unavailable — raw WESAD dataset not present locally'}</p>
+        
+        <button disabled={fedDisabled || !health.wesad?.raw_data_available_locally} onClick={() => act(() => api('experiment-jobs', { mode: 'federated', rounds: 1, dataset: 'wesad' }))}>Run 1-round FedAvg (WESAD)</button>
+        <button disabled={fedDisabled || !health.wesad?.raw_data_available_locally} onClick={() => act(() => api('experiment-jobs', { mode: 'private-federated', rounds: 1, dataset: 'wesad' }))}>Run Private FedAvg (WESAD)</button>
       </div>
       <div className="card">
         <h2>Client Topology</h2>

@@ -208,7 +208,7 @@ test.describe('NEXORA Dashboard Flows', () => {
     
     // Check Evidence Page WESAD status
     await page.goto('/Evidence');
-    await expect(page.getByText('WESAD offline evaluation: NOT RUN')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('WESAD recorded evaluation: COMPLETED')).toBeVisible({ timeout: 15000 });
 
     // Check AI Insights Dataset dropdown
     await page.goto('/AI%20insights');

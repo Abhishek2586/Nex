@@ -14,7 +14,7 @@ export function AIInsights({ health, models, pred, act, refresh }: any) {
         <label style={{ marginRight: '10px' }}>Dataset:
           <select value={selectedDataset} onChange={e => SD(e.target.value)}>
             <option value="synthetic">Synthetic</option>
-            {health.wesad && health.wesad.status === 'COMPLETED' && <option value="wesad">WESAD</option>}
+            {health.wesad && health.wesad.recorded_evaluation_status === 'COMPLETED' && <option value="wesad">WESAD</option>}
           </select>
         </label>
       </div>

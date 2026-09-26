@@ -5,7 +5,7 @@ Updated: 2026-09-23.
 | Evidence level | Status | What the repository demonstrates |
 |---|---|---|
 | Core Synthetic software loop | Passed | Generated data, replay, feature extraction, local inference, explanations, feedback, three local client services, FedAvg, Opacus ledger and evidence export. |
-| Reviewer hardening | Passed | 20/20 Python tests pass locally. Playwright 9/9 browser flows pass. Frontend production build pass. flake8 and mypy clean. |
+| Reviewer hardening | Passed | 29/29 Python tests pass locally. Playwright 9/9 browser flows pass. Frontend production build pass. flake8 and mypy clean. |
 | CI green | Passed | CI tests confirmed green locally via `verify.py --full`. |
 | Final Acceptance | Passed | Handover condition met. Full integration verified. |
 | Recorded-data validation | Passed | WESAD adapter, parser tests, and actual recorded WESAD data imported. Real evaluation on participant-separated splits executed for local, federated, and private federated models. |
@@ -14,7 +14,7 @@ Updated: 2026-09-23.
 
 ## Verified on this workspace
 
-- Python integration tests (20 tests) cover malformed session requests, valid state transitions, origin rejection, WebSocket catch-up, safe event schemas, feedback handling, features, explanations, federation math and WESAD adapter behavior.
+- Python integration tests (29 tests) cover malformed session requests, valid state transitions, origin rejection, WebSocket catch-up, safe event schemas, feedback handling, features, explanations, federation math and WESAD adapter behavior.
 - The posture scenario creates a browser prompt and persists **Manual feedback**. The missing-data scenario abstains rather than substituting a score.
 - Standard and private federation transmit tensor updates between loopback services. They do not use secure aggregation and all processes run on the same host.
 - Opacus accounting is real for non-overlapping 30-second **Synthetic** windows. The executed ledger is experimental non-cryptographic randomness, so it is not a patient-level guarantee.

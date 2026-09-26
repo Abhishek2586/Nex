@@ -6,9 +6,12 @@ export function Evidence({ health, models, activeModel }: any) {
   return (
     <div className="card">
       <h2>Evidence package</h2>
-      {health.wesad && (health.wesad.centralized_status === 'COMPLETED' || health.wesad.import_status === 'COMPLETED') ? (
+      {health.wesad && health.wesad.recorded_evaluation_status === 'COMPLETED' ? (
         <div style={{ background: 'var(--surface)', borderRadius: '0.5rem', padding: '1rem', marginBottom: '1rem' }}>
-          <p><strong>WESAD offline evaluation:</strong> COMPLETED</p>
+          <p><strong>WESAD recorded evaluation:</strong> COMPLETED</p>
+          {!health.wesad.raw_data_available_locally && (
+             <p><strong>Raw WESAD source:</strong> not present in this clone</p>
+          )}
           <p><strong>Imported subjects:</strong> {health.wesad.subject_count}</p>
           <p><strong>Train / Val / Test split counts:</strong> {health.wesad.splits.train?.length} / {health.wesad.splits.validation?.length} / {health.wesad.splits.test?.length}</p>
           <p><strong>Dataset SHA256:</strong> {health.wesad.dataset_hash}</p>
@@ -21,7 +24,7 @@ export function Evidence({ health, models, activeModel }: any) {
         </div>
       ) : (
         <div style={{ background: 'var(--surface)', borderRadius: '0.5rem', padding: '1rem', marginBottom: '1rem' }}>
-          <p><strong>WESAD offline evaluation:</strong> NOT RUN</p>
+          <p><strong>WESAD recorded evaluation:</strong> NOT RUN</p>
         </div>
       )}
       <div style={{ background: 'var(--surface)', borderRadius: '0.5rem', padding: '1rem', marginBottom: '1rem' }}>

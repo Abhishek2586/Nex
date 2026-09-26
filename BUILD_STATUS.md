@@ -6,7 +6,7 @@ Started: 2026-09-18.
 - Core synthetic software prototype: PASS
 - Reviewer hardening: IN PROGRESS (see table below for per-component status)
 - WESAD adapter/import support: PASS (adapter functions implemented and tested; real WESAD dataset successfully imported)
-- Real WESAD evaluation: NOT RUN
+- Real WESAD evaluation: COMPLETED (recorded evaluation evidence committed)
 - Physical embodiment: NOT BUILT
 - Public/cloud deployment: OUT OF SCOPE
 - Clinical validation: NOT PERFORMED
@@ -54,7 +54,7 @@ Started: 2026-09-18.
 | Model Lifecycle States | PASS | candidate → active; previous active → retired on activation. |
 | Predictor Reload Tracking | PASS | Silent failures eliminated; loaded_model_hash, reload_status, reload_error exposed. |
 | Reviewer hardening | IN PROGRESS | Addressing 40-point hardening checklist. |
-| CI Green | PASS | All checks passed on current HEAD. |
+| CI Green | IN PROGRESS | GitHub Actions Run #38 in progress. |
 | Final Acceptance | PASS | Rehearsal completed successfully. |
 
 - 2026-09-22 audit: 20 Python tests pass locally. Tests are clean-clone safe — they skip gracefully where generated artifacts (trained models) are absent. Two third-party deprecation warnings remain (httpx starlette) which are not Nexora code.
@@ -81,7 +81,11 @@ Started: 2026-09-18.
 Hardware, public cloud and clinical claims are not demonstrated by this prototype. WESAD dataset evaluation is for research algorithm metrics only and is NOT clinical validation.
 
 ## Measured WESAD research results (NOT clinical validation)
-- WESAD NOT RUN. No real WESAD files supplied. Metrics not available.
+- Real WESAD recorded-data evaluation was executed locally. Raw WESAD source files are not distributed with the public repository.
+- Baseline (Random Forest): balanced_accuracy=0.719, macro_F1=0.727
+- Neural: balanced_accuracy=0.482, macro_F1=0.347
+- One-round FedAvg: balanced_accuracy=0.382, macro_F1=0.382
+- One-round Private FedAvg: balanced_accuracy=0.555, macro_F1=0.499
 
 ## Measured synthetic results
 

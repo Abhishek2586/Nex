@@ -43,7 +43,7 @@ Verified: 19 Python tests pass, frontend production build passes, flake8 and myp
 ## Synthetic vs WESAD status
 
 - **Synthetic:** All measured results and evidence. Fully functional.
-- **WESAD (Recorded dataset):** Adapter and parser tests implemented. No WESAD subject files supplied or evaluated. The importer is present but `real_dataset_status = unavailable`.
+- **WESAD (Recorded dataset):** Real WESAD recorded-data evaluation was executed locally. Raw WESAD source files are not distributed with the public repository.
 
 ## Evidence and report paths
 
@@ -64,7 +64,6 @@ Verified: 19 Python tests pass, frontend production build passes, flake8 and myp
 - No secure multi-party aggregation — FedAvg is plain sample-weighted averaging.
 - Opacus ran in experimental non-cryptographic randomness mode (not deployment-grade DP).
 - No patient-level privacy guarantee; privacy unit is one 30-second synthetic window.
-- No WESAD real-data evaluation (dataset not supplied).
 - No formal decision-to-render p95 measurement.
 - Inference/render latency not measured.
 - Same-host process separation is not a security boundary.
