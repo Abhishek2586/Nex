@@ -5,8 +5,8 @@ Updated: 2026-09-23.
 | Evidence level | Status | What the repository demonstrates |
 |---|---|---|
 | Core Synthetic software loop | Passed | Generated data, replay, feature extraction, local inference, explanations, feedback, three local client services, FedAvg, Opacus ledger and evidence export. |
-| Reviewer hardening | Passed | 29/29 Python tests pass locally. Playwright 9/9 browser flows pass. Frontend production build pass. flake8 and mypy clean. |
-| CI green | Passed | CI tests confirmed green locally via `verify.py --full`. |
+| Reviewer hardening | Passed | 29/29 Python tests pass locally. Playwright 10/10 browser flows pass. Frontend production build pass. flake8 and mypy clean. |
+| CI green | Passed | GitHub Actions Run #43 completed successfully on commit ba6d0a5575d0c871937206b5cf104db7e4687dca. |
 | Final Acceptance | Passed | Handover condition met. Full integration verified. |
 | Recorded-data validation | Passed | WESAD adapter, parser tests, and actual recorded WESAD data imported. Real evaluation on participant-separated splits executed for local, federated, and private federated models. |
 | Physical embodiment | Not built | No physical sensor, haptic output, wearable, hospital interface or embedded equivalence test. |
@@ -27,7 +27,7 @@ Updated: 2026-09-23.
 - **Dataset SHA256:** `2667dc5de34a6fe1a46f7e035f3319e937daa6c846743628e0820dfaa2edaa2a`
 - **Splits:** Train (9), Validation (3), Test (3)
 - **Tree (Random Forest):** balanced_accuracy=0.719, macro_F1=0.727
-- **Local MLP (Neural Network):** balanced_accuracy=0.380, macro_F1=0.347
+- **Local MLP (Neural Network):** balanced_accuracy=0.4827445652173913, macro_F1=0.34729476692618505
 - **One-round FedAvg:** balanced_accuracy=0.382, macro_F1=0.382
 - **One-round Private FedAvg (Opacus DP):** balanced_accuracy=0.555, macro_F1=0.499
 

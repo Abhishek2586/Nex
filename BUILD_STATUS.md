@@ -4,7 +4,9 @@ Started: 2026-09-18.
 
 ## Completion Levels
 - Core synthetic software prototype: PASS
-- Reviewer hardening: IN PROGRESS (see table below for per-component status)
+- Reviewer hardening: PASS (all reviewer hardening items completed and verified)
+- CI Green: PASS (GitHub Actions Run #43 completed successfully on commit ba6d0a5575d0c871937206b5cf104db7e4687dca)
+- Final Software Prototype Acceptance: PASS (Handover conditions met; verified by GitHub Actions Run #43)
 - WESAD adapter/import support: PASS (adapter functions implemented and tested; real WESAD dataset successfully imported)
 - Real WESAD evaluation: COMPLETED (recorded evaluation evidence committed)
 - Physical embodiment: NOT BUILT
@@ -53,9 +55,9 @@ Started: 2026-09-18.
 | Federation Update Hash | PASS | Coordinator verifies update_hash matches actual received bytes; client_id binding verified. |
 | Model Lifecycle States | PASS | candidate → active; previous active → retired on activation. |
 | Predictor Reload Tracking | PASS | Silent failures eliminated; loaded_model_hash, reload_status, reload_error exposed. |
-| Reviewer hardening | IN PROGRESS | Addressing 40-point hardening checklist. |
-| CI Green | IN PROGRESS | GitHub Actions CI runs on ubuntu-latest; local verification fully passes. |
-| Final Acceptance | PARTIAL | Reviewer hardening and CI Green awaiting final GitHub Actions run confirmation. Fresh clone rehearsal 10/10 at commit 6e3a92d. |
+| Reviewer hardening | PASS | 40-point hardening checklist completed and verified. |
+| CI Green | PASS | GitHub Actions Run #43 completed successfully on commit ba6d0a5575d0c871937206b5cf104db7e4687dca. |
+| Final Acceptance | PASS | Reviewer hardening, CI Green (Run #43 on commit ba6d0a5575d0c871937206b5cf104db7e4687dca), and 10/10 fresh clone rehearsal verified. |
 
 - 2026-09-22 audit: 20 Python tests pass locally. Tests are clean-clone safe — they skip gracefully where generated artifacts (trained models) are absent. Two third-party deprecation warnings remain (httpx starlette) which are not Nexora code.
 - Evidence ZIP uses a canonical builder with allowlist-based inclusion and rich manifest (git_commit, active_model_hash, architecture_id, feature_schema_hash, per-file sha256).
